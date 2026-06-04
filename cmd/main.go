@@ -29,6 +29,16 @@ func main() {
 
 	r.GET("/health", handler.HealthCheck)
 
+	api := r.Group("/api")
+	{
+		auth := api.Group("/auth")
+		{
+			auth.POST("/register", handler.Register)
+			auth.POST("/login", handler.Login)
+			auth.POST("/refresh", handler.RefreshToken)
+		}
+	}
+
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
