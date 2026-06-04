@@ -1,0 +1,65 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ['feat/*', 'fix/*', 'chore/*']
+  pull_request:
+    branches: [development-master, main]
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: spendwise
+          POSTGRES_PASSWORD: spendwise
+          POSTGRES_DB: spendwise_main_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: spendwise
+          DB_PASSWORD: spendwise
+          DB_NAME: spendwise_main_db
+          JWT_SECRET: test-secret
+        run: go test ./... -count=1 -race
+
+      - name: Build
+        run: go build -o spendwise-ms ./cmd/main.go
