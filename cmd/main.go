@@ -72,6 +72,16 @@ func main() {
 			goals.POST("/:id/contributions", handler.AddContribution)
 			goals.GET("/:id/contributions", handler.GetContributionHistory)
 		}
+
+		budgets := api.Group("/budgets")
+		budgets.Use(middleware.AuthRequired())
+		{
+			budgets.GET("", handler.GetBudgets)
+			budgets.POST("", handler.CreateBudget)
+			budgets.GET("/:id", handler.GetBudgetByID)
+			budgets.PUT("/:id", handler.UpdateBudget)
+			budgets.DELETE("/:id", handler.DeleteBudget)
+		}
 	}
 
 	log.Printf("Server starting on port %s", cfg.Port)
