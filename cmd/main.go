@@ -4,6 +4,7 @@ import (
 	"log"
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/handler"
+	"spendwise-ms/internal/middleware"
 	"spendwise-ms/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,17 @@ func main() {
 			auth.POST("/register", handler.Register)
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
+		}
+
+		transactions := api.Group("/transactions")
+		transactions.Use(middleware.AuthRequired())
+		{
+			transactions.GET("", handler.GetTransactions)
+			transactions.POST("", handler.CreateTransaction)
+			transactions.GET("/:id", handler.GetTransactionByID)
+			transactions.PUT("/:id", handler.UpdateTransaction)
+			transactions.DELETE("/:id", handler.DeleteTransaction)
+			transactions.POST("/sync", handler.SyncTransactions)
 		}
 	}
 
