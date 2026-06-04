@@ -49,6 +49,29 @@ func main() {
 			transactions.DELETE("/:id", handler.DeleteTransaction)
 			transactions.POST("/sync", handler.SyncTransactions)
 		}
+
+		categories := api.Group("/categories")
+		categories.Use(middleware.AuthRequired())
+		{
+			categories.GET("", handler.GetCategories)
+			categories.POST("", handler.CreateCategory)
+			categories.PUT("/:id", handler.UpdateCategory)
+			categories.DELETE("/:id", handler.DeleteCategory)
+		}
+
+		goals := api.Group("/goals")
+		goals.Use(middleware.AuthRequired())
+		{
+			goals.GET("", handler.GetGoals)
+			goals.POST("", handler.CreateGoal)
+			goals.GET("/:id", handler.GetGoalByID)
+			goals.PUT("/:id", handler.UpdateGoal)
+			goals.PATCH("/:id/archive", handler.ArchiveGoal)
+			goals.PATCH("/:id/unarchive", handler.UnarchiveGoal)
+			goals.DELETE("/:id", handler.DeleteGoal)
+			goals.POST("/:id/contributions", handler.AddContribution)
+			goals.GET("/:id/contributions", handler.GetContributionHistory)
+		}
 	}
 
 	log.Printf("Server starting on port %s", cfg.Port)

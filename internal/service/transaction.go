@@ -35,12 +35,11 @@ func (s *TransactionService) CreateTransaction(userID string, req dto.CreateTran
 		return nil, fmt.Errorf("category not found")
 	}
 
-	occurredDate, err := time.Parse("2006-01-02", req.OccurredAt)
-	if err != nil {
+	if _, err := time.Parse("2006-01-02", req.OccurredAt); err != nil {
 		return nil, fmt.Errorf("invalid date format, expected YYYY-MM-DD")
 	}
-	today := time.Now().Truncate(24 * time.Hour)
-	if occurredDate.After(today) {
+	today := time.Now().Format("2006-01-02")
+	if req.OccurredAt > today {
 		return nil, fmt.Errorf("future transactions are not allowed")
 	}
 
@@ -131,12 +130,11 @@ func (s *TransactionService) UpdateTransaction(userID, id string, req dto.Update
 		existing.CategoryID = cat.ID
 	}
 	if req.OccurredAt != "" {
-		occurredDate, err := time.Parse("2006-01-02", req.OccurredAt)
-		if err != nil {
+		if _, err := time.Parse("2006-01-02", req.OccurredAt); err != nil {
 			return nil, fmt.Errorf("invalid date format, expected YYYY-MM-DD")
 		}
-		today := time.Now().Truncate(24 * time.Hour)
-		if occurredDate.After(today) {
+		today := time.Now().Format("2006-01-02")
+		if req.OccurredAt > today {
 			return nil, fmt.Errorf("future transactions are not allowed")
 		}
 		existing.OccurredAt = req.OccurredAt
@@ -184,13 +182,12 @@ func (s *TransactionService) SyncTransactions(userID string, req dto.SyncRequest
 			continue
 		}
 
-		occurredDate, err := time.Parse("2006-01-02", item.OccurredAt)
-		if err != nil {
+		if _, err := time.Parse("2006-01-02", item.OccurredAt); err != nil {
 			failedItems = append(failedItems, dto.SyncFailedItem{Index: i, Error: "invalid date format"})
 			continue
 		}
-		today := time.Now().Truncate(24 * time.Hour)
-		if occurredDate.After(today) {
+		today := time.Now().Format("2006-01-02")
+		if item.OccurredAt > today {
 			failedItems = append(failedItems, dto.SyncFailedItem{Index: i, Error: "future transactions are not allowed"})
 			continue
 		}
