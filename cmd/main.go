@@ -82,6 +82,12 @@ func main() {
 			budgets.PUT("/:id", handler.UpdateBudget)
 			budgets.DELETE("/:id", handler.DeleteBudget)
 		}
+
+		sync := api.Group("/sync")
+		sync.Use(middleware.AuthRequired())
+		{
+			sync.POST("", handler.SyncData)
+		}
 	}
 
 	log.Printf("Server starting on port %s", cfg.Port)
