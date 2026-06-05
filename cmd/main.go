@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/handler"
 	"spendwise-ms/internal/middleware"
@@ -37,6 +38,13 @@ func main() {
 			auth.POST("/register", handler.Register)
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
+		}
+
+		profile := api.Group("/profile")
+		profile.Use(middleware.AuthRequired())
+		{
+			profile.GET("", handler.GetProfile)
+			profile.PUT("", handler.UpdateProfile)
 		}
 
 		transactions := api.Group("/transactions")
@@ -89,6 +97,11 @@ func main() {
 			sync.POST("", handler.SyncData)
 		}
 	}
+
+	r.GET("/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/docs/index.html")
+	})
+	r.Static("/docs", "./docs")
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
