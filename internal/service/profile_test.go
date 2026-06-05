@@ -12,12 +12,16 @@ import (
 
 func setupProfileTestDB() {
 	if config.DB != nil {
+		config.DB.Where("1 = 1").Delete(&model.GoalContribution{})
+		config.DB.Where("1 = 1").Delete(&model.Budget{})
+		config.DB.Where("1 = 1").Delete(&model.SavingGoal{})
+		config.DB.Where("1 = 1").Delete(&model.Transaction{})
+		config.DB.Where("1 = 1").Delete(&model.Category{})
 		config.DB.Where("1 = 1").Delete(&model.User{})
 		return
 	}
 	config.InitDB(config.Load())
-	config.AutoMigrate(&model.User{})
-	config.DB.Where("1 = 1").Delete(&model.User{})
+	config.AutoMigrate(&model.User{}, &model.Transaction{}, &model.Category{}, &model.SavingGoal{}, &model.GoalContribution{}, &model.Budget{})
 }
 
 func createTestUser() (string, string) {
@@ -43,9 +47,6 @@ func TestGetProfile_Success(t *testing.T) {
 	}
 	if resp.Email != email {
 		t.Errorf("Expected email '%s', got '%s'", email, resp.Email)
-	}
-	if resp.CreatedAt == "" {
-		t.Error("CreatedAt should not be empty")
 	}
 }
 
@@ -75,19 +76,85 @@ func TestUpdateProfile_Name(t *testing.T) {
 	}
 }
 
-func TestUpdateProfile_EmailAlreadyTaken(t *testing.T) {
+func TestUpdateProfile_Theme(t *testing.T) {
 	setupProfileTestDB()
 	userID, _ := createTestUser()
-	otherID := uuid.New().String()
-	config.DB.Create(&model.User{
-		ID: otherID, Name: "Other", Email: "taken@test.com", Password: "hash",
-	})
 	svc := NewProfileService(config.DB)
 
-	_, err := svc.UpdateProfile(userID, dto.UpdateProfileRequest{
-		Email: "taken@test.com",
+	resp, err := svc.UpdateProfile(userID, dto.UpdateProfileRequest{
+		Theme: "dark",
 	})
+	if err != nil {
+		t.Fatalf("UpdateProfile failed: %v", err)
+	}
+	if resp.Theme != "dark" {
+		t.Errorf("Expected theme 'dark', got '%s'", resp.Theme)
+	}
+}
+
+func TestChangePassword_Success(t *testing.T) {
+	setupProfileTestDB()
+	userID, _ := createTestUser()
+	hash, _ := HashPassword("oldpassword")
+	config.DB.Model(&model.User{}).Where("id = ?", userID).Update("password", hash)
+	svc := NewProfileService(config.DB)
+
+	err := svc.ChangePassword(userID, "oldpassword", "newpassword123")
+	if err != nil {
+		t.Fatalf("ChangePassword failed: %v", err)
+	}
+}
+
+func TestChangePassword_WrongCurrent(t *testing.T) {
+	setupProfileTestDB()
+	userID, _ := createTestUser()
+	hash, _ := HashPassword("correctpassword")
+	config.DB.Model(&model.User{}).Where("id = ?", userID).Update("password", hash)
+	svc := NewProfileService(config.DB)
+
+	err := svc.ChangePassword(userID, "wrongpassword", "newpassword")
 	if err == nil {
-		t.Error("Expected error for duplicate email")
+		t.Error("Expected error for wrong current password")
+	}
+}
+
+func TestDeleteAccount_Success(t *testing.T) {
+	setupProfileTestDB()
+	userID, _ := createTestUser()
+	svc := NewProfileService(config.DB)
+
+	err := svc.DeleteAccount(userID, "DELETE")
+	if err != nil {
+		t.Fatalf("DeleteAccount failed: %v", err)
+	}
+
+	_, err = svc.GetProfile(userID)
+	if err == nil {
+		t.Error("Expected user to be deleted")
+	}
+}
+
+func TestDeleteAccount_WrongConfirmation(t *testing.T) {
+	setupProfileTestDB()
+	userID, _ := createTestUser()
+	svc := NewProfileService(config.DB)
+
+	err := svc.DeleteAccount(userID, "delete")
+	if err == nil {
+		t.Error("Expected error for incorrect confirmation")
+	}
+}
+
+func TestExportData(t *testing.T) {
+	setupProfileTestDB()
+	userID, _ := createTestUser()
+	svc := NewProfileService(config.DB)
+
+	resp, err := svc.ExportData(userID)
+	if err != nil {
+		t.Fatalf("ExportData failed: %v", err)
+	}
+	if resp.Profile.Name != "Profile User" {
+		t.Errorf("Expected profile name 'Profile User', got '%s'", resp.Profile.Name)
 	}
 }

@@ -1,0 +1,19 @@
+{
+  "theme": "purple",
+  "showSidebar": true,
+  "layout": "modern",
+  "hideDownloadButton": false,
+  "hideTestRequestButton": false,
+  "metaData": {
+    "title": "SpendWise API",
+    "description": "Personal finance management API — Golang + Gin + PostgreSQL"
+  },
+  "authentication": {
+    "preferredSecurityScheme": "bearerAuth",
+    "http": {
+      "bearer": {
+        "token": ""
+      }
+    }
+  }
+}
