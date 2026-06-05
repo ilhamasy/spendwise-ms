@@ -235,8 +235,17 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "transaction",
 			EntityID:   t.ID,
-			Data:       t,
-			Timestamp:  timestamp,
+			Data: map[string]interface{}{
+				"id":         t.ID,
+				"type":       t.Type,
+				"amount":     t.Amount,
+				"categoryId": t.CategoryID,
+				"occurredAt": t.OccurredAt,
+				"note":       t.Note,
+				"createdAt":  t.CreatedAt.Format(time.RFC3339),
+				"updatedAt":  t.UpdatedAt.Format(time.RFC3339),
+			},
+			Timestamp: timestamp,
 		})
 	}
 
@@ -267,8 +276,17 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "goal",
 			EntityID:   g.ID,
-			Data:       g,
-			Timestamp:  timestamp,
+			Data: map[string]interface{}{
+				"id":           g.ID,
+				"name":         g.Name,
+				"targetAmount": g.TargetAmount,
+				"currentSaved": g.CurrentSaved,
+				"targetDate":   g.TargetDate,
+				"status":       g.Status,
+				"createdAt":    g.CreatedAt.Format(time.RFC3339),
+				"updatedAt":    g.UpdatedAt.Format(time.RFC3339),
+			},
+			Timestamp: timestamp,
 		})
 	}
 
@@ -281,8 +299,16 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "budget",
 			EntityID:   b.ID,
-			Data:       b,
-			Timestamp:  timestamp,
+			Data: map[string]interface{}{
+				"id":         b.ID,
+				"name":       b.Name,
+				"amount":     b.Amount,
+				"period":     b.Period,
+				"categoryId": b.CategoryID,
+				"createdAt":  b.CreatedAt.Format(time.RFC3339),
+				"updatedAt":  b.UpdatedAt.Format(time.RFC3339),
+			},
+			Timestamp: timestamp,
 		})
 	}
 
