@@ -22,3 +22,4 @@ vendor/
 
 # Environment
 .env
+.DS_Store
