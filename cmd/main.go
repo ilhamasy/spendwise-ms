@@ -32,6 +32,10 @@ func main() {
 
 	r.GET("/health", handler.HealthCheck)
 
+	r.GET("/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html")
+	})
+
 	v1 := r.Group("/api/v1")
 	{
 		auth := v1.Group("/auth")
@@ -100,14 +104,8 @@ func main() {
 		{
 			sync.POST("", handler.SyncData)
 		}
-
-		docs := v1.Group("/docs")
-		{
-			docs.GET("", func(c *gin.Context) {
-				c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html")
-			})
-		}
 	}
+
 	r.Static("/api/v1/docs", "./docs")
 
 	log.Printf("Server starting on port %s", cfg.Port)
