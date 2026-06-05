@@ -25,6 +25,23 @@
           "message": { "type": "string" }
         }
       },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 100 },
+          "email": { "type": "string", "format": "email", "maxLength": 100 },
+          "password": { "type": "string", "minLength": 8 }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
       "AuthResponse": {
         "type": "object",
         "properties": {
@@ -46,7 +63,21 @@
           "id": { "type": "string" },
           "name": { "type": "string" },
           "email": { "type": "string" },
+          "currency": { "type": "string" },
+          "theme": { "type": "string" },
+          "startingBalance": { "type": "integer" },
           "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateTransaction": {
+        "type": "object",
+        "required": ["type", "amount", "categoryId", "occurredAt"],
+        "properties": {
+          "type": { "type": "string", "enum": ["income", "expense"] },
+          "amount": { "type": "integer", "minimum": 1 },
+          "categoryId": { "type": "string" },
+          "occurredAt": { "type": "string", "format": "date" },
+          "note": { "type": "string", "maxLength": 200 }
         }
       },
       "Transaction": {
@@ -61,6 +92,45 @@
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" }
         }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["income", "expense"] },
+          "icon": { "type": "string" },
+          "color": { "type": "string" },
+          "isDefault": { "type": "boolean" }
+        }
+      },
+      "Goal": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "targetAmount": { "type": "integer" },
+          "currentSaved": { "type": "integer" },
+          "targetDate": { "type": "string", "format": "date" },
+          "status": { "type": "string", "enum": ["active", "archived"] },
+          "progress": { "type": "number" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Budget": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "amount": { "type": "integer" },
+          "period": { "type": "string", "enum": ["daily", "weekly", "monthly", "yearly"] },
+          "categoryId": { "type": "string" },
+          "spent": { "type": "integer" },
+          "remaining": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
       }
     }
   },
@@ -70,41 +140,44 @@
         "tags": ["Health"],
         "summary": "Health check",
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "service": { "type": "string" }, "status": { "type": "string" } } } } } }
+          "200": { "description": "OK" }
         }
       }
     },
-    "/api/auth/register": {
+    "/api/v1/auth/register": {
       "post": {
         "tags": ["Auth"],
         "summary": "Register new user",
         "requestBody": {
-          "content": { "application/json": { "schema": { "type": "object", "required": ["name", "email", "password"], "properties": { "name": { "type": "string" }, "email": { "type": "string", "format": "email" }, "password": { "type": "string", "minLength": 8 } } } } }
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } }
         },
         "responses": {
           "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
-          "409": { "description": "Email already registered" }
+          "409": { "description": "Email already registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
-    "/api/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
         "tags": ["Auth"],
         "summary": "Login",
         "requestBody": {
-          "content": { "application/json": { "schema": { "type": "object", "required": ["email", "password"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string" } } } } }
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
         },
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
-          "401": { "description": "Invalid credentials" }
+          "401": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
-    "/api/auth/refresh": {
+    "/api/v1/auth/refresh": {
       "post": {
         "tags": ["Auth"],
         "summary": "Refresh token",
         "requestBody": {
+          "required": true,
           "content": { "application/json": { "schema": { "type": "object", "required": ["refreshToken"], "properties": { "refreshToken": { "type": "string" } } } } }
         },
         "responses": {
@@ -112,7 +185,7 @@
         }
       }
     },
-    "/api/profile": {
+    "/api/v1/users/me": {
       "get": {
         "tags": ["Profile"],
         "summary": "Get current user profile",
@@ -126,14 +199,50 @@
         "summary": "Update profile",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" }, "email": { "type": "string", "format": "email" } } } } }
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" }, "currency": { "type": "string" }, "theme": { "type": "string", "enum": ["light", "dark", "system"] }, "startingBalance": { "type": "integer" } } } } }
         },
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProfileResponse" } } } }
         }
+      },
+      "delete": {
+        "tags": ["Profile"],
+        "summary": "Delete account (cascading)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["confirmation"], "properties": { "confirmation": { "type": "string", "enum": ["DELETE"] } } } } }
+        },
+        "responses": {
+          "204": { "description": "Account deleted" }
+        }
       }
     },
-    "/api/transactions": {
+    "/api/v1/users/me/password": {
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Change password",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["currentPassword", "newPassword"], "properties": { "currentPassword": { "type": "string" }, "newPassword": { "type": "string", "minLength": 8 } } } } }
+        },
+        "responses": {
+          "200": { "description": "Password changed" }
+        }
+      }
+    },
+    "/api/v1/users/me/export": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Export all user data",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Complete JSON export" }
+        }
+      }
+    },
+    "/api/v1/transactions": {
       "get": {
         "tags": ["Transactions"],
         "summary": "List transactions",
@@ -151,7 +260,7 @@
           { "name": "search", "in": "query", "schema": { "type": "string" } }
         ],
         "responses": {
-          "200": { "description": "Paginated transaction list" }
+          "200": { "description": "Paginated list", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Transaction" } }, "meta": { "type": "object", "properties": { "total": { "type": "integer" }, "page": { "type": "integer" }, "limit": { "type": "integer" }, "totalPages": { "type": "integer" } } } } } } } }
         }
       },
       "post": {
@@ -159,63 +268,60 @@
         "summary": "Create transaction",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Transaction" } } }
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTransaction" } } }
         },
         "responses": {
-          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Transaction" } } } }
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Transaction" } } } },
+          "400": { "description": "Validation error" }
         }
       }
     },
-    "/api/transactions/{id}": {
-      "get": { "tags": ["Transactions"], "summary": "Get transaction by ID", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "put": { "tags": ["Transactions"], "summary": "Update transaction", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "delete": { "tags": ["Transactions"], "summary": "Delete transaction", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
+    "/api/v1/transactions/{id}": {
+      "get": { "tags": ["Transactions"], "summary": "Get by ID", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
+      "put": { "tags": ["Transactions"], "summary": "Update", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
+      "delete": { "tags": ["Transactions"], "summary": "Delete", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
     },
-    "/api/transactions/sync": {
-      "post": {
-        "tags": ["Transactions"],
-        "summary": "Batch sync transactions",
-        "security": [{ "bearerAuth": [] }],
-        "responses": { "200": { "description": "OK" } }
-      }
+    "/api/v1/transactions/sync": {
+      "post": { "tags": ["Transactions"], "summary": "Batch sync transactions", "security": [{ "bearerAuth": [] }], "responses": { "200": { "description": "OK" } } }
     },
-    "/api/categories": {
+    "/api/v1/categories": {
       "get": { "tags": ["Categories"], "summary": "List categories", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "type", "in": "query", "schema": { "type": "string", "enum": ["income", "expense"] } }], "responses": { "200": { "description": "OK" } } },
-      "post": { "tags": ["Categories"], "summary": "Create category", "security": [{ "bearerAuth": [] }], "responses": { "201": { "description": "Created" } } }
+      "post": { "tags": ["Categories"], "summary": "Create category", "security": [{ "bearerAuth": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name", "type"], "properties": { "name": { "type": "string" }, "type": { "type": "string", "enum": ["income", "expense"] }, "icon": { "type": "string" }, "color": { "type": "string" } } } } } }, "responses": { "201": { "description": "Created" } } }
     },
-    "/api/categories/{id}": {
-      "put": { "tags": ["Categories"], "summary": "Update category", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "delete": { "tags": ["Categories"], "summary": "Delete category", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
+    "/api/v1/categories/{id}": {
+      "put": { "tags": ["Categories"], "summary": "Update", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
+      "delete": { "tags": ["Categories"], "summary": "Delete (supports ?reassignTo=)", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "reassignTo", "in": "query", "schema": { "type": "string" }, "description": "Reassign transactions to this category before delete" }], "responses": { "204": { "description": "No Content" }, "409": { "description": "Has transactions, needs reassignTo" } } }
     },
-    "/api/goals": {
+    "/api/v1/goals": {
       "get": { "tags": ["Goals"], "summary": "List goals", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "archived"] } }], "responses": { "200": { "description": "OK" } } },
-      "post": { "tags": ["Goals"], "summary": "Create goal", "security": [{ "bearerAuth": [] }], "responses": { "201": { "description": "Created" } } }
+      "post": { "tags": ["Goals"], "summary": "Create goal", "security": [{ "bearerAuth": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name", "targetAmount"], "properties": { "name": { "type": "string" }, "targetAmount": { "type": "integer", "minimum": 1 }, "currentSaved": { "type": "integer" }, "targetDate": { "type": "string", "format": "date" } } } } } }, "responses": { "201": { "description": "Created" } } }
     },
-    "/api/goals/{id}": {
+    "/api/v1/goals/{id}": {
       "get": { "tags": ["Goals"], "summary": "Get goal", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "put": { "tags": ["Goals"], "summary": "Update goal", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "delete": { "tags": ["Goals"], "summary": "Delete goal", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
+      "put": { "tags": ["Goals"], "summary": "Update", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
+      "delete": { "tags": ["Goals"], "summary": "Delete", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
     },
-    "/api/goals/{id}/archive": {
-      "patch": { "tags": ["Goals"], "summary": "Archive goal", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
+    "/api/v1/goals/{id}/archive": {
+      "patch": { "tags": ["Goals"], "summary": "Archive", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
     },
-    "/api/goals/{id}/unarchive": {
-      "patch": { "tags": ["Goals"], "summary": "Unarchive goal", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
+    "/api/v1/goals/{id}/unarchive": {
+      "patch": { "tags": ["Goals"], "summary": "Unarchive", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
     },
-    "/api/goals/{id}/contributions": {
-      "get": { "tags": ["Goals"], "summary": "List contributions", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "post": { "tags": ["Goals"], "summary": "Add contribution", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "201": { "description": "Created" } } }
+    "/api/v1/goals/{id}/contributions": {
+      "get": { "tags": ["Goals"], "summary": "List contributions", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "page", "in": "query", "schema": { "type": "integer" } }, { "name": "limit", "in": "query", "schema": { "type": "integer" } }], "responses": { "200": { "description": "OK" } } },
+      "post": { "tags": ["Goals"], "summary": "Add contribution", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["amount"], "properties": { "amount": { "type": "integer", "minimum": 1 }, "note": { "type": "string" }, "date": { "type": "string", "format": "date" } } } } } }, "responses": { "201": { "description": "Created" } } }
     },
-    "/api/budgets": {
+    "/api/v1/budgets": {
       "get": { "tags": ["Budgets"], "summary": "List budgets", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "period", "in": "query", "schema": { "type": "string", "enum": ["daily", "weekly", "monthly", "yearly"] } }], "responses": { "200": { "description": "OK" } } },
-      "post": { "tags": ["Budgets"], "summary": "Create budget", "security": [{ "bearerAuth": [] }], "responses": { "201": { "description": "Created" } } }
+      "post": { "tags": ["Budgets"], "summary": "Create budget", "security": [{ "bearerAuth": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name", "amount", "period", "categoryId"], "properties": { "name": { "type": "string" }, "amount": { "type": "integer", "minimum": 1 }, "period": { "type": "string", "enum": ["daily", "weekly", "monthly", "yearly"] }, "categoryId": { "type": "string" } } } } } }, "responses": { "201": { "description": "Created" } } }
     },
-    "/api/budgets/{id}": {
+    "/api/v1/budgets/{id}": {
       "get": { "tags": ["Budgets"], "summary": "Get budget", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "put": { "tags": ["Budgets"], "summary": "Update budget", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
-      "delete": { "tags": ["Budgets"], "summary": "Delete budget", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
+      "put": { "tags": ["Budgets"], "summary": "Update", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } },
+      "delete": { "tags": ["Budgets"], "summary": "Delete", "security": [{ "bearerAuth": [] }], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "No Content" } } }
     },
-    "/api/sync": {
+    "/api/v1/sync": {
       "post": {
         "tags": ["Sync"],
         "summary": "Bidirectional data sync",
