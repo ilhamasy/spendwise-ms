@@ -19,13 +19,9 @@ import (
 )
 
 func setupBudgetTestDB() {
-	if config.DB != nil {
-		config.DB.Where("1 = 1").Delete(&model.Budget{})
-		config.DB.Where("1 = 1").Delete(&model.Category{})
-		config.DB.Where("1 = 1").Delete(&model.User{})
-		return
+	if config.DB == nil {
+		config.InitDB(config.Load())
 	}
-	config.InitDB(config.Load())
 	config.AutoMigrate(&model.Budget{}, &model.Category{}, &model.User{})
 	config.DB.Where("1 = 1").Delete(&model.Budget{})
 	config.DB.Where("1 = 1").Delete(&model.Category{})
