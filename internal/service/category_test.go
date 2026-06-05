@@ -20,17 +20,11 @@ func setupCategoryTestDB() {
 			&model.User{}, &model.Transaction{}, &model.Category{}, &model.SavingGoal{}, &model.GoalContribution{}, &model.Budget{},
 		)
 	}
-
-
-
+	config.DB.Where("1 = 1").Delete(&model.GoalContribution{})
+	config.DB.Where("1 = 1").Delete(&model.Budget{})
+	config.DB.Where("1 = 1").Delete(&model.SavingGoal{})
 	config.DB.Where("1 = 1").Delete(&model.Transaction{})
-
-
-
 	config.DB.Where("1 = 1").Delete(&model.Category{})
-
-
-
 	config.DB.Where("1 = 1").Delete(&model.User{})
 }
 

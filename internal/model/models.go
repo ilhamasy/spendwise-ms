@@ -7,12 +7,15 @@ import (
 )
 
 type User struct {
-	ID        string `gorm:"primaryKey;size:36"`
-	Name      string `gorm:"size:100;not null"`
-	Email     string `gorm:"size:100;uniqueIndex;not null"`
-	Password  string `gorm:"size:255;not null"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID              string `gorm:"primaryKey;size:36"`
+	Name            string `gorm:"size:100;not null"`
+	Email           string `gorm:"size:100;uniqueIndex;not null"`
+	Password        string `gorm:"size:255;not null"`
+	Currency        string `gorm:"size:10;default:IDR"`
+	Theme           string `gorm:"size:10;default:system"`
+	StartingBalance int64  `gorm:"default:0"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Transaction struct {

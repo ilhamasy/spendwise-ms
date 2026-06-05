@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/handler"
 	"spendwise-ms/internal/middleware"
@@ -27,19 +28,30 @@ func main() {
 	r := gin.Default()
 
 	r.Use(config.CORS())
+	r.Use(middleware.RateLimitGlobal())
 
 	r.GET("/health", handler.HealthCheck)
 
-	api := r.Group("/api")
+	v1 := r.Group("/api/v1")
 	{
-		auth := api.Group("/auth")
+		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", handler.Register)
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
 		}
 
-		transactions := api.Group("/transactions")
+		users := v1.Group("/users/me")
+		users.Use(middleware.AuthRequired())
+		{
+			users.GET("", handler.GetProfile)
+			users.PUT("", handler.UpdateProfile)
+			users.PUT("/password", handler.ChangePassword)
+			users.DELETE("", handler.DeleteAccount)
+			users.GET("/export", handler.ExportUserData)
+		}
+
+		transactions := v1.Group("/transactions")
 		transactions.Use(middleware.AuthRequired())
 		{
 			transactions.GET("", handler.GetTransactions)
@@ -50,7 +62,7 @@ func main() {
 			transactions.POST("/sync", handler.SyncTransactions)
 		}
 
-		categories := api.Group("/categories")
+		categories := v1.Group("/categories")
 		categories.Use(middleware.AuthRequired())
 		{
 			categories.GET("", handler.GetCategories)
@@ -59,7 +71,7 @@ func main() {
 			categories.DELETE("/:id", handler.DeleteCategory)
 		}
 
-		goals := api.Group("/goals")
+		goals := v1.Group("/goals")
 		goals.Use(middleware.AuthRequired())
 		{
 			goals.GET("", handler.GetGoals)
@@ -73,7 +85,7 @@ func main() {
 			goals.GET("/:id/contributions", handler.GetContributionHistory)
 		}
 
-		budgets := api.Group("/budgets")
+		budgets := v1.Group("/budgets")
 		budgets.Use(middleware.AuthRequired())
 		{
 			budgets.GET("", handler.GetBudgets)
@@ -83,12 +95,20 @@ func main() {
 			budgets.DELETE("/:id", handler.DeleteBudget)
 		}
 
-		sync := api.Group("/sync")
+		sync := v1.Group("/sync")
 		sync.Use(middleware.AuthRequired())
 		{
 			sync.POST("", handler.SyncData)
 		}
+
+		docs := v1.Group("/docs")
+		{
+			docs.GET("", func(c *gin.Context) {
+				c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html")
+			})
+		}
 	}
+	r.Static("/api/v1/docs", "./docs")
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
