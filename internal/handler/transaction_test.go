@@ -20,10 +20,6 @@ import (
 )
 
 func setupTransactionTestDB() {
-	if config.DB == nil {
-		config.InitDB(config.Load())
-	}
-	config.AutoMigrate(&model.Transaction{}, &model.Category{}, &model.User{})
 	config.DB.Where("1 = 1").Delete(&model.Transaction{})
 	config.DB.Where("1 = 1").Delete(&model.Category{})
 	config.DB.Where("1 = 1").Delete(&model.User{})

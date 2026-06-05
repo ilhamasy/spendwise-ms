@@ -19,10 +19,6 @@ import (
 )
 
 func setupGoalTestDB() {
-	if config.DB == nil {
-		config.InitDB(config.Load())
-	}
-	config.AutoMigrate(&model.GoalContribution{}, &model.SavingGoal{}, &model.User{})
 	config.DB.Where("1 = 1").Delete(&model.GoalContribution{})
 	config.DB.Where("1 = 1").Delete(&model.SavingGoal{})
 	config.DB.Where("1 = 1").Delete(&model.User{})

@@ -17,10 +17,6 @@ import (
 )
 
 func setupTestDB() {
-	if config.DB == nil {
-		config.InitDB(config.Load())
-	}
-	config.AutoMigrate(&model.User{})
 	config.DB.Where("1 = 1").Delete(&model.User{})
 }
 
