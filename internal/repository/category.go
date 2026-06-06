@@ -30,6 +30,14 @@ func (r *CategoryRepository) FindAll(userID, filterType string) ([]model.Categor
 	return categories, nil
 }
 
+func (r *CategoryRepository) FindAllForSync(userID string) ([]model.Category, error) {
+	var categories []model.Category
+	if err := r.db.Unscoped().Where("user_id = ? OR is_default = true", userID).Order("is_default DESC, name ASC").Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
 func (r *CategoryRepository) FindByID(id, userID string) (*model.Category, error) {
 	var cat model.Category
 	err := r.db.Where("id = ? AND (user_id = ? OR is_default = true)", id, userID).First(&cat).Error

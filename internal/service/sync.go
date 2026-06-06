@@ -254,7 +254,7 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		})
 	}
 
-	cats, _ := s.catRepo.FindAll(userID, "")
+	cats, _ := s.catRepo.FindAllForSync(userID)
 	for _, c := range cats {
 		if c.DeletedAt != nil {
 			changes = append(changes, dto.SyncChangeItem{
