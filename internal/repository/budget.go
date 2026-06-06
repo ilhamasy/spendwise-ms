@@ -40,7 +40,9 @@ func (r *BudgetRepository) FindByID(id, userID string) (*model.Budget, error) {
 }
 
 func (r *BudgetRepository) Create(budget *model.Budget) error {
-	budget.ID = uuid.New().String()
+	if budget.ID == "" {
+		budget.ID = uuid.New().String()
+	}
 	return r.db.Create(budget).Error
 }
 

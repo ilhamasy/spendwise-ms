@@ -57,7 +57,9 @@ func (r *CategoryRepository) FindByNameAndType(name, catType, userID string) (*m
 }
 
 func (r *CategoryRepository) Create(cat *model.Category) error {
-	cat.ID = uuid.New().String()
+	if cat.ID == "" {
+		cat.ID = uuid.New().String()
+	}
 	return r.db.Create(cat).Error
 }
 

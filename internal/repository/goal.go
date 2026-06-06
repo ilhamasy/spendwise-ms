@@ -40,7 +40,9 @@ func (r *GoalRepository) FindByID(id, userID string) (*model.SavingGoal, error) 
 }
 
 func (r *GoalRepository) Create(goal *model.SavingGoal) error {
-	goal.ID = uuid.New().String()
+	if goal.ID == "" {
+		goal.ID = uuid.New().String()
+	}
 	return r.db.Create(goal).Error
 }
 
