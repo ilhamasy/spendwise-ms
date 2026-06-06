@@ -55,9 +55,10 @@ func (r *CategoryRepository) Create(cat *model.Category) error {
 
 func (r *CategoryRepository) Update(cat *model.Category) error {
 	return r.db.Model(&model.Category{}).Where("id = ? AND user_id = ?", cat.ID, cat.UserID).Updates(map[string]interface{}{
-		"name":  cat.Name,
-		"icon":  cat.Icon,
-		"color": cat.Color,
+		"name":       cat.Name,
+		"icon":       cat.Icon,
+		"color":      cat.Color,
+		"deleted_at": cat.DeletedAt,
 	}).Error
 }
 
