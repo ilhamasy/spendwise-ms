@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
 	"spendwise-ms/internal/model"
 
@@ -19,7 +20,7 @@ func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
 
 func (r *CategoryRepository) FindAll(userID, filterType string) ([]model.Category, error) {
 	var categories []model.Category
-	query := r.db.Where("(user_id = ? OR is_default = true)", userID)
+	query := r.db.Where("(user_id = ? OR is_default = true) AND deleted_at IS NULL", userID)
 	if filterType != "" {
 		query = query.Where("type = ?", filterType)
 	}
@@ -61,7 +62,8 @@ func (r *CategoryRepository) Update(cat *model.Category) error {
 }
 
 func (r *CategoryRepository) Delete(id, userID string) error {
-	return r.db.Where("id = ? AND user_id = ? AND is_default = false", id, userID).Delete(&model.Category{}).Error
+	now := time.Now()
+	return r.db.Model(&model.Category{}).Where("id = ? AND user_id = ? AND is_default = false", id, userID).Update("deleted_at", now).Error
 }
 
 func (r *CategoryRepository) CountTransactionsByCategoryID(categoryID string) (int64, error) {

@@ -152,6 +152,11 @@ func (s *SyncService) applyCategoryChange(userID string, change dto.SyncChange) 
 		cat.Name = updated.Name
 		cat.Icon = updated.Icon
 		cat.Color = updated.Color
+		payloadMap := change.Payload.(map[string]interface{})
+		if status, ok := payloadMap["status"].(string); ok && status == "archived" {
+			now := time.Now()
+			cat.DeletedAt = &now
+		}
 		return nil, s.catRepo.Update(cat)
 	case "DELETE":
 		s.catRepo.Delete(change.EntityID, userID)
@@ -251,6 +256,19 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 
 	cats, _ := s.catRepo.FindAll(userID, "")
 	for _, c := range cats {
+		if c.DeletedAt != nil {
+			changes = append(changes, dto.SyncChangeItem{
+				EntityType: "category",
+				EntityID:   c.ID,
+				Data:       map[string]interface{}{"id": c.ID, "isDeleted": true},
+				Timestamp:  c.UpdatedAt.Format(time.RFC3339),
+			})
+			continue
+		}
+		timestamp := c.UpdatedAt.Format(time.RFC3339)
+		if since != "" && timestamp <= since {
+			continue
+		}
 		cData := map[string]interface{}{
 			"id":        c.ID,
 			"name":      c.Name,
@@ -258,12 +276,13 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 			"icon":      c.Icon,
 			"color":     c.Color,
 			"isDefault": c.IsDefault,
+			"updatedAt": c.UpdatedAt.Format(time.RFC3339),
 		}
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "category",
 			EntityID:   c.ID,
 			Data:       cData,
-			Timestamp:  dto.NowTimestamp(),
+			Timestamp:  timestamp,
 		})
 	}
 
