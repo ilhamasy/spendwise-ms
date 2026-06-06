@@ -264,8 +264,17 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 			changes = append(changes, dto.SyncChangeItem{
 				EntityType: "category",
 				EntityID:   c.ID,
-				Data:       map[string]interface{}{"id": c.ID, "isDeleted": true},
-				Timestamp:  c.UpdatedAt.Format(time.RFC3339),
+				Data: map[string]interface{}{
+					"id":        c.ID,
+					"name":      c.Name,
+					"type":      c.Type,
+					"icon":      c.Icon,
+					"color":     c.Color,
+					"isDefault": c.IsDefault,
+					"isDeleted": true,
+					"updatedAt": c.UpdatedAt.Format(time.RFC3339),
+				},
+				Timestamp: c.UpdatedAt.Format(time.RFC3339),
 			})
 			continue
 		}
