@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"spendwise-ms/internal/dto"
@@ -143,6 +144,7 @@ func (s *SyncService) applyCategoryChange(userID string, change dto.SyncChange) 
 	case "UPDATE":
 		cat, err := s.catRepo.FindByID(change.EntityID, userID)
 		if err != nil {
+			log.Printf("[sync] UPDATE category failed: id=%s err=%v", change.EntityID, err)
 			return nil, err
 		}
 		updated, err := parsePayload[model.Category](change.Payload)
@@ -153,9 +155,11 @@ func (s *SyncService) applyCategoryChange(userID string, change dto.SyncChange) 
 		cat.Icon = updated.Icon
 		cat.Color = updated.Color
 		payloadMap := change.Payload.(map[string]interface{})
+		log.Printf("[sync] UPDATE category payload: %+v", payloadMap)
 		if status, ok := payloadMap["status"].(string); ok && status == "archived" {
 			now := time.Now()
 			cat.DeletedAt = &now
+			log.Printf("[sync] category %s marked as deleted", cat.ID)
 		}
 		return nil, s.catRepo.Update(cat)
 	case "DELETE":
