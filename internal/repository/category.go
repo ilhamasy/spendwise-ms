@@ -59,6 +59,7 @@ func (r *CategoryRepository) Update(cat *model.Category) error {
 		"icon":       cat.Icon,
 		"color":      cat.Color,
 		"deleted_at": cat.DeletedAt,
+		"updated_at": cat.UpdatedAt,
 	}).Error
 }
 
