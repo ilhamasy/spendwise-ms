@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
 	"spendwise-ms/internal/model"
 
@@ -19,11 +20,19 @@ func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
 
 func (r *CategoryRepository) FindAll(userID, filterType string) ([]model.Category, error) {
 	var categories []model.Category
-	query := r.db.Where("(user_id = ? OR is_default = true)", userID)
+	query := r.db.Where("(user_id = ? OR is_default = true) AND deleted_at IS NULL", userID)
 	if filterType != "" {
 		query = query.Where("type = ?", filterType)
 	}
 	if err := query.Order("is_default DESC, name ASC").Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+func (r *CategoryRepository) FindAllForSync(userID string) ([]model.Category, error) {
+	var categories []model.Category
+	if err := r.db.Unscoped().Where("user_id = ? OR is_default = true", userID).Order("is_default DESC, name ASC").Find(&categories).Error; err != nil {
 		return nil, err
 	}
 	return categories, nil
@@ -48,20 +57,25 @@ func (r *CategoryRepository) FindByNameAndType(name, catType, userID string) (*m
 }
 
 func (r *CategoryRepository) Create(cat *model.Category) error {
-	cat.ID = uuid.New().String()
+	if cat.ID == "" {
+		cat.ID = uuid.New().String()
+	}
 	return r.db.Create(cat).Error
 }
 
 func (r *CategoryRepository) Update(cat *model.Category) error {
 	return r.db.Model(&model.Category{}).Where("id = ? AND user_id = ?", cat.ID, cat.UserID).Updates(map[string]interface{}{
-		"name":  cat.Name,
-		"icon":  cat.Icon,
-		"color": cat.Color,
+		"name":       cat.Name,
+		"icon":       cat.Icon,
+		"color":      cat.Color,
+		"deleted_at": cat.DeletedAt,
+		"updated_at": cat.UpdatedAt,
 	}).Error
 }
 
 func (r *CategoryRepository) Delete(id, userID string) error {
-	return r.db.Where("id = ? AND user_id = ? AND is_default = false", id, userID).Delete(&model.Category{}).Error
+	now := time.Now()
+	return r.db.Model(&model.Category{}).Where("id = ? AND user_id = ? AND is_default = false", id, userID).Update("deleted_at", now).Error
 }
 
 func (r *CategoryRepository) CountTransactionsByCategoryID(categoryID string) (int64, error) {

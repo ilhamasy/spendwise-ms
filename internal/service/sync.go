@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"spendwise-ms/internal/dto"
@@ -143,6 +144,7 @@ func (s *SyncService) applyCategoryChange(userID string, change dto.SyncChange) 
 	case "UPDATE":
 		cat, err := s.catRepo.FindByID(change.EntityID, userID)
 		if err != nil {
+			log.Printf("[sync] UPDATE category failed: id=%s err=%v", change.EntityID, err)
 			return nil, err
 		}
 		updated, err := parsePayload[model.Category](change.Payload)
@@ -152,6 +154,13 @@ func (s *SyncService) applyCategoryChange(userID string, change dto.SyncChange) 
 		cat.Name = updated.Name
 		cat.Icon = updated.Icon
 		cat.Color = updated.Color
+		payloadMap := change.Payload.(map[string]interface{})
+		log.Printf("[sync] UPDATE category payload: %+v", payloadMap)
+		if status, ok := payloadMap["status"].(string); ok && status == "archived" {
+			now := time.Now()
+			cat.DeletedAt = &now
+			log.Printf("[sync] category %s marked as deleted", cat.ID)
+		}
 		return nil, s.catRepo.Update(cat)
 	case "DELETE":
 		s.catRepo.Delete(change.EntityID, userID)
@@ -235,13 +244,44 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "transaction",
 			EntityID:   t.ID,
-			Data:       t,
-			Timestamp:  timestamp,
+			Data: map[string]interface{}{
+				"id":         t.ID,
+				"type":       t.Type,
+				"amount":     t.Amount,
+				"categoryId": t.CategoryID,
+				"occurredAt": t.OccurredAt,
+				"note":       t.Note,
+				"createdAt":  t.CreatedAt.Format(time.RFC3339),
+				"updatedAt":  t.UpdatedAt.Format(time.RFC3339),
+			},
+			Timestamp: timestamp,
 		})
 	}
 
-	cats, _ := s.catRepo.FindAll(userID, "")
+	cats, _ := s.catRepo.FindAllForSync(userID)
 	for _, c := range cats {
+		if c.DeletedAt != nil {
+			changes = append(changes, dto.SyncChangeItem{
+				EntityType: "category",
+				EntityID:   c.ID,
+				Data: map[string]interface{}{
+					"id":        c.ID,
+					"name":      c.Name,
+					"type":      c.Type,
+					"icon":      c.Icon,
+					"color":     c.Color,
+					"isDefault": c.IsDefault,
+					"isDeleted": true,
+					"updatedAt": c.UpdatedAt.Format(time.RFC3339),
+				},
+				Timestamp: c.UpdatedAt.Format(time.RFC3339),
+			})
+			continue
+		}
+		timestamp := c.UpdatedAt.Format(time.RFC3339)
+		if since != "" && timestamp <= since {
+			continue
+		}
 		cData := map[string]interface{}{
 			"id":        c.ID,
 			"name":      c.Name,
@@ -249,12 +289,13 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 			"icon":      c.Icon,
 			"color":     c.Color,
 			"isDefault": c.IsDefault,
+			"updatedAt": c.UpdatedAt.Format(time.RFC3339),
 		}
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "category",
 			EntityID:   c.ID,
 			Data:       cData,
-			Timestamp:  dto.NowTimestamp(),
+			Timestamp:  timestamp,
 		})
 	}
 
@@ -267,8 +308,17 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "goal",
 			EntityID:   g.ID,
-			Data:       g,
-			Timestamp:  timestamp,
+			Data: map[string]interface{}{
+				"id":           g.ID,
+				"name":         g.Name,
+				"targetAmount": g.TargetAmount,
+				"currentSaved": g.CurrentSaved,
+				"targetDate":   g.TargetDate,
+				"status":       g.Status,
+				"createdAt":    g.CreatedAt.Format(time.RFC3339),
+				"updatedAt":    g.UpdatedAt.Format(time.RFC3339),
+			},
+			Timestamp: timestamp,
 		})
 	}
 
@@ -281,8 +331,16 @@ func (s *SyncService) getServerChanges(userID, since string) ([]dto.SyncChangeIt
 		changes = append(changes, dto.SyncChangeItem{
 			EntityType: "budget",
 			EntityID:   b.ID,
-			Data:       b,
-			Timestamp:  timestamp,
+			Data: map[string]interface{}{
+				"id":         b.ID,
+				"name":       b.Name,
+				"amount":     b.Amount,
+				"period":     b.Period,
+				"categoryId": b.CategoryID,
+				"createdAt":  b.CreatedAt.Format(time.RFC3339),
+				"updatedAt":  b.UpdatedAt.Format(time.RFC3339),
+			},
+			Timestamp: timestamp,
 		})
 	}
 

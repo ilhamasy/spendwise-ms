@@ -125,7 +125,9 @@ func (r *TransactionRepository) BatchCreate(transactions []model.Transaction) (i
 	var failedErrors []string
 
 	for i, tx := range transactions {
+	if tx.ID == "" {
 		tx.ID = uuid.New().String()
+	}
 		if err := r.db.Create(&tx).Error; err != nil {
 			failedIndices = append(failedIndices, i)
 			failedErrors = append(failedErrors, err.Error())
