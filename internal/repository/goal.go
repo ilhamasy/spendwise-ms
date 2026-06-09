@@ -52,6 +52,7 @@ func (r *GoalRepository) Update(goal *model.SavingGoal) error {
 		"target_amount": goal.TargetAmount,
 		"current_saved": goal.CurrentSaved,
 		"target_date":   goal.TargetDate,
+		"status":        goal.Status,
 	}).Error
 }
 
