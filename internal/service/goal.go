@@ -15,11 +15,15 @@ import (
 var goalValidate = validator.New()
 
 type GoalService struct {
-	repo *repository.GoalRepository
+	repo repository.IGoalRepository
 }
 
 func NewGoalService(db *gorm.DB) *GoalService {
 	return &GoalService{repo: repository.NewGoalRepository(db)}
+}
+
+func NewGoalServiceWithRepo(r repository.IGoalRepository) *GoalService {
+	return &GoalService{repo: r}
 }
 
 func (s *GoalService) ListGoals(userID, status string) ([]dto.GoalResponse, error) {
