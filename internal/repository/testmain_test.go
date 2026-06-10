@@ -9,6 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	config.EnsureTestDB()
 	os.Setenv("DB_NAME", "spendwise_test_db")
 	config.DB = nil
 	cfg := config.Load()
