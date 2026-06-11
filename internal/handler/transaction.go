@@ -96,7 +96,11 @@ func UpdateTransaction(c *gin.Context) {
 
 	resp, err := getTxnService().UpdateTransaction(userID, id, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad_request", Message: err.Error()})
+		status := http.StatusBadRequest
+		if err.Error() == "transaction not found" {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, dto.ErrorResponse{Error: "bad_request", Message: err.Error()})
 		return
 	}
 

@@ -311,7 +311,7 @@ func TestSyncTransactions_Handler(t *testing.T) {
 	r := gin.New()
 	r.POST("/tx/sync", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, SyncTransactions)
 
-	body, _ := json.Marshal([]map[string]interface{}{})
+	body, _ := json.Marshal(map[string]interface{}{"transactions": []map[string]interface{}{{"id": "00000000-0000-0000-0000-000000000001", "type": "expense", "amount": 10000, "categoryId": "00000000-0000-0000-0000-000000000001", "occurredAt": "2026-01-01"}}})
 	req, _ := http.NewRequest("POST", "/tx/sync", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
