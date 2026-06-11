@@ -15,11 +15,15 @@ import (
 var catValidate = validator.New()
 
 type CategoryService struct {
-	repo *repository.CategoryRepository
+	repo repository.ICategoryRepository
 }
 
 func NewCategoryService(db *gorm.DB) *CategoryService {
 	return &CategoryService{repo: repository.NewCategoryRepository(db)}
+}
+
+func NewCategoryServiceWithRepo(r repository.ICategoryRepository) *CategoryService {
+	return &CategoryService{repo: r}
 }
 
 func (s *CategoryService) ListCategories(userID, filterType string) ([]dto.CategoryResponse, error) {

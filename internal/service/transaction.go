@@ -16,13 +16,17 @@ import (
 var txnValidate = validator.New()
 
 type TransactionService struct {
-	repo *repository.TransactionRepository
+	repo repository.ITransactionRepository
 }
 
 func NewTransactionService(db *gorm.DB) *TransactionService {
 	return &TransactionService{
 		repo: repository.NewTransactionRepository(db),
 	}
+}
+
+func NewTransactionServiceWithRepo(r repository.ITransactionRepository) *TransactionService {
+	return &TransactionService{repo: r}
 }
 
 func (s *TransactionService) CreateTransaction(userID string, req dto.CreateTransactionRequest) (*dto.TransactionResponse, error) {

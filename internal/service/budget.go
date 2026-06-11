@@ -14,8 +14,8 @@ import (
 var budgetValidate = validator.New()
 
 type BudgetService struct {
-	repo    *repository.BudgetRepository
-	catRepo *repository.CategoryRepository
+	repo    repository.IBudgetRepository
+	catRepo repository.ICategoryRepository
 }
 
 func NewBudgetService(db *gorm.DB) *BudgetService {
@@ -23,6 +23,10 @@ func NewBudgetService(db *gorm.DB) *BudgetService {
 		repo:    repository.NewBudgetRepository(db),
 		catRepo: repository.NewCategoryRepository(db),
 	}
+}
+
+func NewBudgetServiceWithRepo(r repository.IBudgetRepository, cr repository.ICategoryRepository) *BudgetService {
+	return &BudgetService{repo: r, catRepo: cr}
 }
 
 func (s *BudgetService) ListBudgets(userID, period string) ([]dto.BudgetResponse, error) {

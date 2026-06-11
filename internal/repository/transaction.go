@@ -107,7 +107,14 @@ func (r *TransactionRepository) Update(tx *model.Transaction) error {
 }
 
 func (r *TransactionRepository) Delete(id, userID string) error {
-	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{}).Error
+	result := r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r *TransactionRepository) FindCategoryByID(id, userID string) (*model.Category, error) {
