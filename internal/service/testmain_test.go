@@ -11,6 +11,7 @@ import (
 
 func TestMain(m *testing.M) {
 	os.Setenv("DB_NAME", "spendwise_test_db")
+	os.Setenv("JWT_SECRET", "test-jwt-secret")
 	config.DB = nil
 	cfg := config.Load()
 	config.InitDB(cfg)

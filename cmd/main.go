@@ -35,10 +35,12 @@ func main() {
 	v1 := r.Group("/api/v1")
 	{
 		auth := v1.Group("/auth")
+		auth.Use(middleware.RateLimitAuth())
 		{
 			auth.POST("/register", handler.Register)
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
+			auth.POST("/logout", handler.Logout)
 		}
 
 		users := v1.Group("/users/me")

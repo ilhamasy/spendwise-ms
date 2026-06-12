@@ -13,20 +13,32 @@ import (
 	"gorm.io/gorm"
 )
 
-var jwtSecret = []byte(getJWTSecret())
-
-func getJWTSecret() string {
-	if s := os.Getenv("JWT_SECRET"); s != "" {
-		return s
+func getJWTSecret() []byte {
+	s := os.Getenv("JWT_SECRET")
+	if s == "" {
+		panic("JWT_SECRET environment variable is required")
 	}
-	return "spendwise-secret-key"
+	return []byte(s)
 }
+
+type TokenType string
+
+const (
+	AccessToken  TokenType = "access"
+	RefreshToken TokenType = "refresh"
+)
 
 type Claims struct {
-	UserID string `json:"userId"`
-	Email  string `json:"email"`
+	UserID    string    `json:"userId"`
+	Email     string    `json:"email"`
+	TokenType TokenType `json:"token_type"`
 	jwt.RegisteredClaims
 }
+
+const (
+	AccessTokenTTL  = 15 * time.Minute
+	RefreshTokenTTL = 7 * 24 * time.Hour
+)
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
@@ -39,29 +51,31 @@ func CheckPassword(password, hash string) bool {
 
 func GenerateTokens(userID, email string) (string, string, error) {
 	accessClaims := Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:    userID,
+		Email:     email,
+		TokenType: AccessToken,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ID:        uuid.New().String(),
 		},
 	}
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString(jwtSecret)
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString(getJWTSecret())
 	if err != nil {
 		return "", "", err
 	}
 
 	refreshClaims := Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:    userID,
+		Email:     email,
+		TokenType: RefreshToken,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ID:        uuid.New().String(),
 		},
 	}
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(jwtSecret)
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(getJWTSecret())
 	if err != nil {
 		return "", "", err
 	}
@@ -71,7 +85,7 @@ func GenerateTokens(userID, email string) (string, string, error) {
 
 func ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+		return getJWTSecret(), nil
 	})
 	if err != nil {
 		return nil, err

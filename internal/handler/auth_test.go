@@ -64,14 +64,25 @@ func TestRegisterHandler(t *testing.T) {
 	var resp dto.AuthResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
 
-	if resp.AccessToken == "" {
-		t.Error("Access token should not be empty")
-	}
-	if resp.RefreshToken == "" {
-		t.Error("Refresh token should not be empty")
-	}
 	if resp.User.Email != "unittest@spendwise.com" {
 		t.Errorf("Expected email 'unittest@spendwise.com', got '%s'", resp.User.Email)
+	}
+
+	foundAccess := false
+	foundRefresh := false
+	for _, cookie := range w.Result().Cookies() {
+		if cookie.Name == "spendwise-access-token" && cookie.Value != "" {
+			foundAccess = true
+		}
+		if cookie.Name == "spendwise-refresh-token" && cookie.Value != "" {
+			foundRefresh = true
+		}
+	}
+	if !foundAccess {
+		t.Error("spendwise-access-token cookie not set")
+	}
+	if !foundRefresh {
+		t.Error("spendwise-refresh-token cookie not set")
 	}
 }
 
@@ -164,13 +175,21 @@ func TestRefreshHandler(t *testing.T) {
 	w1 := httptest.NewRecorder()
 	r.ServeHTTP(w1, req1)
 
-	var regResp dto.AuthResponse
-	json.Unmarshal(w1.Body.Bytes(), &regResp)
+	// Extract refresh token cookie
+	var refreshToken string
+	for _, cookie := range w1.Result().Cookies() {
+		if cookie.Name == "spendwise-refresh-token" {
+			refreshToken = cookie.Value
+		}
+	}
+	if refreshToken == "" {
+		t.Fatal("refresh token cookie not found")
+	}
 
-	// Refresh
-	body, _ := json.Marshal(dto.RefreshRequest{RefreshToken: regResp.RefreshToken})
-	req2, _ := http.NewRequest("POST", "/api/auth/refresh", bytes.NewBuffer(body))
+	// Refresh — send cookie
+	req2, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
 	req2.Header.Set("Content-Type", "application/json")
+	req2.AddCookie(&http.Cookie{Name: "spendwise-refresh-token", Value: refreshToken})
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, req2)
 
@@ -178,10 +197,14 @@ func TestRefreshHandler(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w2.Code, w2.Body.String())
 	}
 
-	var resp dto.AuthResponse
-	json.Unmarshal(w2.Body.Bytes(), &resp)
-	if resp.AccessToken == "" {
-		t.Error("Refreshed access token should not be empty")
+	foundAccess := false
+	for _, cookie := range w2.Result().Cookies() {
+		if cookie.Name == "spendwise-access-token" && cookie.Value != "" {
+			foundAccess = true
+		}
+	}
+	if !foundAccess {
+		t.Error("Refreshed access token cookie not set")
 	}
 }
 

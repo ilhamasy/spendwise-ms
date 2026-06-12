@@ -80,3 +80,7 @@ func rateLimit(limiter *rateLimiter) gin.HandlerFunc {
 func RateLimitGlobal() gin.HandlerFunc {
 	return rateLimit(globalLimiter)
 }
+
+func RateLimitAuth() gin.HandlerFunc {
+	return rateLimit(authLimiter)
+}
