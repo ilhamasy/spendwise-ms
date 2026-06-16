@@ -16,14 +16,18 @@ func main() {
 
 	config.InitDB(cfg)
 
-	config.AutoMigrate(
-		&model.User{},
-		&model.Transaction{},
-		&model.Category{},
-		&model.SavingGoal{},
-		&model.GoalContribution{},
-		&model.Budget{},
-	)
+	if err := config.RunMigrations(cfg); err != nil {
+		log.Printf("Warning: Migration failed: %v", err)
+		log.Println("Falling back to AutoMigrate...")
+		config.AutoMigrate(
+			&model.User{},
+			&model.Transaction{},
+			&model.Category{},
+			&model.SavingGoal{},
+			&model.GoalContribution{},
+			&model.Budget{},
+		)
+	}
 
 	r := gin.Default()
 
