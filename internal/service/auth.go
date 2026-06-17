@@ -1,7 +1,11 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -128,5 +132,98 @@ func Login(db *gorm.DB, email, password string) (*model.User, error) {
 	if !CheckPassword(password, user.Password) {
 		return nil, errors.New("invalid email or password")
 	}
+	return &user, nil
+}
+
+func GoogleLogin(db *gorm.DB, code, clientID, clientSecret string) (*model.User, error) {
+	tokenRes, err := exchangeGoogleCode(code, clientID, clientSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	userInfo, err := fetchGoogleUser(tokenRes.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	var user model.User
+	result := db.Where("email = ?", userInfo.Email).First(&user)
+	if result.Error != nil {
+		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("database error: %w", result.Error)
+		}
+		user = model.User{
+			ID:       uuid.New().String(),
+			Name:     userInfo.Name,
+			Email:    userInfo.Email,
+			Password: "",
+		}
+		if err := db.Create(&user).Error; err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+	}
+
+	return &user, nil
+}
+
+type googleTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	TokenType    string `json:"token_type"`
+	IDToken      string `json:"id_token"`
+}
+
+type googleUserInfo struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+func exchangeGoogleCode(code, clientID, clientSecret string) (*googleTokenResponse, error) {
+	data := url.Values{
+		"code":          {code},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"redirect_uri":  {"http://localhost:3000/auth/google/callback"},
+		"grant_type":    {"authorization_code"},
+	}
+
+	resp, err := http.PostForm("https://oauth2.googleapis.com/token", data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("google token exchange failed with status %d", resp.StatusCode)
+	}
+
+	var tokenRes googleTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenRes); err != nil {
+		return nil, fmt.Errorf("failed to decode token response: %w", err)
+	}
+
+	return &tokenRes, nil
+}
+
+func fetchGoogleUser(accessToken string) (*googleUserInfo, error) {
+	req, _ := http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("google userinfo failed with status %d", resp.StatusCode)
+	}
+
+	var user googleUserInfo
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %w", err)
+	}
+
 	return &user, nil
 }

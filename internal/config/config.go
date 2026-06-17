@@ -8,26 +8,30 @@ import (
 )
 
 type Config struct {
-	Port       string
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	RedisAddr  string
-	JWTSecret  string
+	Port            string
+	DBHost          string
+	DBPort          string
+	DBUser          string
+	DBPassword      string
+	DBName          string
+	RedisAddr       string
+	JWTSecret       string
+	GoogleClientID  string
+	GoogleClientSecret string
 }
 
 func Load() *Config {
 	return &Config{
-		Port:       getEnv("PORT", "8080"),
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "retnotc"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName:     getEnv("DB_NAME", "spendwise_main_db"),
-		RedisAddr:  getEnv("REDIS_ADDR", "localhost:6379"),
-		JWTSecret:  getEnv("JWT_SECRET", "spendwise-secret-key"),
+		Port:               getEnv("PORT", "8080"),
+		DBHost:             getEnv("DB_HOST", "localhost"),
+		DBPort:             getEnv("DB_PORT", "5432"),
+		DBUser:             getEnv("DB_USER", "retnotc"),
+		DBPassword:         getEnv("DB_PASSWORD", ""),
+		DBName:             getEnv("DB_NAME", "spendwise_main_db"),
+		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
+		JWTSecret:          getEnv("JWT_SECRET", "spendwise-secret-key"),
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 	}
 }
 

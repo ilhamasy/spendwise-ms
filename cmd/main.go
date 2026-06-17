@@ -45,6 +45,7 @@ func main() {
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
 			auth.POST("/logout", handler.Logout)
+			auth.POST("/google", handler.GoogleLogin)
 		}
 
 		users := v1.Group("/users/me")

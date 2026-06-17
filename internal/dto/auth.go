@@ -29,3 +29,7 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
 }
+
+type GoogleAuthRequest struct {
+	Code string `json:"code" validate:"required"`
+}

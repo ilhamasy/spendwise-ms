@@ -124,3 +124,34 @@ func Logout(c *gin.Context) {
 	clearTokenCookies(c)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
 }
+
+func GoogleLogin(c *gin.Context) {
+	var req dto.GoogleAuthRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+		return
+	}
+
+	cfg := config.Load()
+	user, err := service.GoogleLogin(config.DB, req.Code, cfg.GoogleClientID, cfg.GoogleClientSecret)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Google login failed: " + err.Error()})
+		return
+	}
+
+	accessToken, refreshToken, err := service.GenerateTokens(user.ID, user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "server_error", Message: "Failed to generate tokens"})
+		return
+	}
+
+	setTokenCookies(c, accessToken, refreshToken)
+
+	c.JSON(http.StatusOK, dto.AuthResponse{
+		User: dto.UserInfo{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+		},
+	})
+}
