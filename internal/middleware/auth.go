@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -10,7 +11,8 @@ import (
 )
 
 func extractToken(c *gin.Context) (string, error) {
-	if token, err := c.Cookie("spendwise-access-token"); err == nil && token != "" {
+	token, err := c.Cookie("spendwise-access-token")
+	if err == nil && token != "" {
 		return token, nil
 	}
 
@@ -19,6 +21,9 @@ func extractToken(c *gin.Context) (string, error) {
 		return strings.TrimPrefix(header, "Bearer "), nil
 	}
 
+	if err != nil {
+		log.Printf("[auth] cookie error: %v, sending from: %s", err, c.Request.Header.Get("Origin"))
+	}
 	return "", http.ErrNoCookie
 }
 
