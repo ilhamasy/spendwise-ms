@@ -133,6 +133,10 @@ func GoogleLogin(c *gin.Context) {
 	}
 
 	cfg := config.Load()
+	if cfg.GoogleClientID == "" || cfg.GoogleClientSecret == "" {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "config_error", Message: "Google OAuth is not configured"})
+		return
+	}
 	user, err := service.GoogleLogin(config.DB, req.Code, cfg.GoogleClientID, cfg.GoogleClientSecret)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Google login failed: " + err.Error()})

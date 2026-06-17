@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -188,6 +190,8 @@ func exchangeGoogleCode(code, clientID, clientSecret string) (*googleTokenRespon
 		"grant_type":    {"authorization_code"},
 	}
 
+	log.Printf("[google-auth] exchanging code (len=%d), client_id=%s, redirect_uri=%s", len(code), clientID, "http://localhost:3000/auth/google/callback")
+
 	resp, err := http.PostForm("https://oauth2.googleapis.com/token", data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code: %w", err)
@@ -195,7 +199,9 @@ func exchangeGoogleCode(code, clientID, clientSecret string) (*googleTokenRespon
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("google token exchange failed with status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[google-auth] exchange failed: status=%d, body=%s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("google token exchange failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var tokenRes googleTokenResponse
