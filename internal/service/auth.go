@@ -163,6 +163,7 @@ func GoogleLogin(db *gorm.DB, code, redirectUri, clientID, clientSecret string) 
 		if err := db.Create(&user).Error; err != nil {
 			return nil, fmt.Errorf("failed to create user: %w", err)
 		}
+		seedDefaultCategories(db, user.ID)
 	}
 
 	return &user, nil
@@ -232,4 +233,40 @@ func fetchGoogleUser(accessToken string) (*googleUserInfo, error) {
 	}
 
 	return &user, nil
+}
+
+var defaultCategories = []struct {
+	Name  string
+	Type  string
+	Icon  string
+	Color string
+}{
+	{"Gaji", "income", "💰", "#2ECC71"},
+	{"Freelance", "income", "💻", "#27AE60"},
+	{"Investasi", "income", "📈", "#1ABC9C"},
+	{"Makanan", "expense", "🍔", "#E74C3C"},
+	{"Transportasi", "expense", "🚗", "#F39C12"},
+	{"Belanja", "expense", "🛒", "#9B59B6"},
+	{"Tagihan", "expense", "📄", "#E67E22"},
+	{"Hiburan", "expense", "🎮", "#3498DB"},
+	{"Kesehatan", "expense", "🏥", "#1ABC9C"},
+	{"Pendidikan", "expense", "📚", "#2C3E50"},
+	{"Ngopi", "expense", "☕", "#795548"},
+	{"Bensin", "expense", "⛽", "#FF5A5F"},
+	{"Lainnya", "expense", "📌", "#95A5A6"},
+}
+
+func seedDefaultCategories(db *gorm.DB, userID string) {
+	for _, cat := range defaultCategories {
+		c := model.Category{
+			ID:        uuid.New().String(),
+			UserID:    userID,
+			Name:      cat.Name,
+			Type:      cat.Type,
+			Icon:      cat.Icon,
+			Color:     cat.Color,
+			IsDefault: true,
+		}
+		db.Create(&c)
+	}
 }
