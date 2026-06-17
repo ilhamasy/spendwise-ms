@@ -51,6 +51,8 @@ func Register(c *gin.Context) {
 	setTokenCookies(c, accessToken, refreshToken)
 
 	c.JSON(http.StatusCreated, dto.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		User: dto.UserInfo{
 			ID:    user.ID,
 			Name:  user.Name,
@@ -85,6 +87,8 @@ func Login(c *gin.Context) {
 	setTokenCookies(c, accessToken, refreshToken)
 
 	c.JSON(http.StatusOK, dto.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		User: dto.UserInfo{
 			ID:    user.ID,
 			Name:  user.Name,
@@ -119,7 +123,10 @@ func RefreshToken(c *gin.Context) {
 
 	setTokenCookies(c, accessToken, refreshToken)
 
-	c.JSON(http.StatusOK, dto.AuthResponse{})
+	c.JSON(http.StatusOK, dto.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	})
 }
 
 func Logout(c *gin.Context) {
@@ -154,6 +161,8 @@ func GoogleLoginPost(c *gin.Context) {
 	setTokenCookies(c, accessToken, refreshToken)
 
 	c.JSON(http.StatusOK, dto.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		User: dto.UserInfo{
 			ID:    user.ID,
 			Name:  user.Name,

@@ -12,7 +12,9 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	User UserInfo `json:"user"`
+	AccessToken  string   `json:"accessToken"`
+	RefreshToken string   `json:"refreshToken"`
+	User         UserInfo `json:"user"`
 }
 
 type UserInfo struct {
