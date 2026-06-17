@@ -9,9 +9,12 @@ import (
 	"spendwise-ms/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
+
 	cfg := config.Load()
 
 	config.InitDB(cfg)
