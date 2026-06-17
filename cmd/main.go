@@ -13,9 +13,12 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not loaded: %v", err)
+	}
 
 	cfg := config.Load()
+	log.Printf("Google Client ID: %s", cfg.GoogleClientID)
 
 	config.InitDB(cfg)
 
