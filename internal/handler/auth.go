@@ -14,6 +14,7 @@ import (
 var validate = validator.New()
 
 func setTokenCookies(c *gin.Context, accessToken, refreshToken string) {
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie("spendwise-access-token", accessToken, int(service.AccessTokenTTL.Seconds()), "/", "", false, true)
 	c.SetCookie("spendwise-refresh-token", refreshToken, int(service.RefreshTokenTTL.Seconds()), "/api/v1/auth/refresh", "", false, true)
 }
