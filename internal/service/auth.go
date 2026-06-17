@@ -137,8 +137,8 @@ func Login(db *gorm.DB, email, password string) (*model.User, error) {
 	return &user, nil
 }
 
-func GoogleLogin(db *gorm.DB, code, clientID, clientSecret string) (*model.User, error) {
-	tokenRes, err := exchangeGoogleCode(code, clientID, clientSecret)
+func GoogleLogin(db *gorm.DB, code, redirectUri, clientID, clientSecret string) (*model.User, error) {
+	tokenRes, err := exchangeGoogleCode(code, redirectUri, clientID, clientSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -181,16 +181,16 @@ type googleUserInfo struct {
 	Name  string `json:"name"`
 }
 
-func exchangeGoogleCode(code, clientID, clientSecret string) (*googleTokenResponse, error) {
+func exchangeGoogleCode(code, redirectUri, clientID, clientSecret string) (*googleTokenResponse, error) {
 	data := url.Values{
 		"code":          {code},
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},
-		"redirect_uri":  {"http://localhost:3000/auth/google/callback"},
+		"redirect_uri":  {redirectUri},
 		"grant_type":    {"authorization_code"},
 	}
 
-	log.Printf("[google-auth] exchanging code (len=%d), client_id=%s, redirect_uri=%s", len(code), clientID, "http://localhost:3000/auth/google/callback")
+	log.Printf("[google-auth] exchanging code (len=%d), client_id=%s, redirect_uri=%s", len(code), clientID, redirectUri)
 
 	resp, err := http.PostForm("https://oauth2.googleapis.com/token", data)
 	if err != nil {
