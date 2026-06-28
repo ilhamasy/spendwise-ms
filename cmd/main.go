@@ -18,7 +18,6 @@ func main() {
 	}
 
 	cfg := config.Load()
-	log.Printf("Google Client ID: %s", cfg.GoogleClientID)
 
 	config.InitDB(cfg)
 
@@ -51,8 +50,6 @@ func main() {
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
 			auth.POST("/logout", handler.Logout)
-			auth.POST("/google", handler.GoogleLoginPost)
-			auth.GET("/google/callback", handler.GoogleLoginRedirect)
 		}
 
 		users := v1.Group("/users/me")

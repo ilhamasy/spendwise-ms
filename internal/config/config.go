@@ -8,16 +8,14 @@ import (
 )
 
 type Config struct {
-	Port            string
-	DBHost          string
-	DBPort          string
-	DBUser          string
-	DBPassword      string
-	DBName          string
-	RedisAddr       string
-	JWTSecret       string
-	GoogleClientID  string
-	GoogleClientSecret string
+	Port       string
+	DBHost     string
+	DBPort     string
+	DBUser     string
+	DBPassword string
+	DBName     string
+	RedisAddr  string
+	JWTSecret  string
 }
 
 func Load() *Config {
@@ -30,8 +28,6 @@ func Load() *Config {
 		DBName:             getEnv("DB_NAME", "spendwise_main_db"),
 		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
 		JWTSecret:          getEnv("JWT_SECRET", "spendwise-secret-key"),
-		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 	}
 }
 
