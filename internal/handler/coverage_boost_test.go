@@ -236,3 +236,109 @@ func createBoostCategory(t *testing.T, uid string) string {
 	config.DB.Create(&model.Category{ID: id, UserID: uid, Name: "BoostCat", Type: "expense", IsDefault: true})
 	return id
 }
+
+func TestHandler_UpdateGoal(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.POST("/goals", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, CreateGoal)
+	r.PUT("/goals/:id", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, UpdateGoal)
+
+	body, _ := json.Marshal(dto.CreateGoalRequest{Name: "OldGoal", TargetAmount: 1000000})
+	req, _ := http.NewRequest("POST", "/goals", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var resp dto.GoalResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	body2, _ := json.Marshal(dto.UpdateGoalRequest{Name: "NewGoal", TargetAmount: 2000000})
+	req2, _ := http.NewRequest("PUT", "/goals/"+resp.ID, bytes.NewBuffer(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK { t.Errorf("Expected 200, got %d", w2.Code) }
+}
+
+func TestHandler_AddContribution(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.POST("/goals", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, CreateGoal)
+	r.POST("/goals/:id/contributions", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, AddContribution)
+
+	body, _ := json.Marshal(dto.CreateGoalRequest{Name: "GoalWithContrib", TargetAmount: 1000000})
+	req, _ := http.NewRequest("POST", "/goals", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var resp dto.GoalResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	body2, _ := json.Marshal(dto.CreateContributionRequest{Amount: 100000, Date: "2026-06-28"})
+	req2, _ := http.NewRequest("POST", "/goals/"+resp.ID+"/contributions", bytes.NewBuffer(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusCreated { t.Errorf("Expected 201, got %d", w2.Code) }
+}
+
+func TestHandler_UpdateProfile(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.PUT("/me", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, UpdateProfile)
+
+	body, _ := json.Marshal(dto.UpdateProfileRequest{Name: "UpdatedName", Currency: "USD"})
+	req, _ := http.NewRequest("PUT", "/me", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK { t.Errorf("Expected 200, got %d: %s", w.Code, w.Body.String()) }
+}
+
+func TestHandler_ExportUserData(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.GET("/export", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, ExportUserData)
+
+	req, _ := http.NewRequest("GET", "/export", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK { t.Errorf("Expected 200, got %d", w.Code) }
+}
+
+func TestHandler_DeleteGoal(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.POST("/goals", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, CreateGoal)
+	r.DELETE("/goals/:id", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, DeleteGoal)
+
+	body, _ := json.Marshal(dto.CreateGoalRequest{Name: "DelMe", TargetAmount: 500000})
+	req, _ := http.NewRequest("POST", "/goals", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var resp dto.GoalResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	req2, _ := http.NewRequest("DELETE", "/goals/"+resp.ID, nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusNoContent { t.Errorf("Expected 204, got %d", w2.Code) }
+}
