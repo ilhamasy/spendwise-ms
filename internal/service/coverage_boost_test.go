@@ -135,3 +135,4 @@ func boostCat(t *testing.T, uid string) string {
 	config.DB.Create(&model.Category{ID: id, UserID: uid, Name: "BCat", Type: "expense", IsDefault: true})
 	return id
 }
+

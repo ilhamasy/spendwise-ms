@@ -342,3 +342,83 @@ func TestHandler_DeleteGoal(t *testing.T) {
 	r.ServeHTTP(w2, req2)
 	if w2.Code != http.StatusNoContent { t.Errorf("Expected 204, got %d", w2.Code) }
 }
+
+func TestHandler_UpdateCategory(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.POST("/cats", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, CreateCategory)
+	r.PUT("/cats/:id", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, UpdateCategory)
+
+	body, _ := json.Marshal(dto.CreateCategoryRequest{Name: "OldCat", Type: "expense"})
+	req, _ := http.NewRequest("POST", "/cats", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var resp dto.CategoryResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	body2, _ := json.Marshal(dto.UpdateCategoryRequest{Name: "UpdatedCat", Color: "#FFF"})
+	req2, _ := http.NewRequest("PUT", "/cats/"+resp.ID, bytes.NewBuffer(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK { t.Errorf("Expected 200, got %d", w2.Code) }
+}
+
+func TestHandler_ArchiveGoal(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.POST("/goals", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, CreateGoal)
+	r.PATCH("/goals/:id/archive", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, ArchiveGoal)
+
+	body, _ := json.Marshal(dto.CreateGoalRequest{Name: "ArchiveGoal", TargetAmount: 500000})
+	req, _ := http.NewRequest("POST", "/goals", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var resp dto.GoalResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	req2, _ := http.NewRequest("PATCH", "/goals/"+resp.ID+"/archive", nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK { t.Errorf("Expected 200, got %d", w2.Code) }
+}
+
+func TestHandler_UnarchiveGoal(t *testing.T) {
+	setupTestDB()
+	uid, token := createBoostUser(t)
+
+	r := gin.New()
+	r.POST("/goals", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, CreateGoal)
+	r.PATCH("/goals/:id/archive", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, ArchiveGoal)
+	r.PATCH("/goals/:id/unarchive", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, UnarchiveGoal)
+
+	body, _ := json.Marshal(dto.CreateGoalRequest{Name: "UnarcGoal", TargetAmount: 500000})
+	req, _ := http.NewRequest("POST", "/goals", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var resp dto.GoalResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	req2, _ := http.NewRequest("PATCH", "/goals/"+resp.ID+"/archive", nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	req3, _ := http.NewRequest("PATCH", "/goals/"+resp.ID+"/unarchive", nil)
+	req3.Header.Set("Authorization", "Bearer "+token)
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK { t.Errorf("Expected 200, got %d", w3.Code) }
+}
