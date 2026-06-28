@@ -121,7 +121,7 @@ func main() {
 	r.Static("/api/v1/docs", "./docs")
 
 	log.Printf("Server starting on port %s", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
+	if err := r.Run("127.0.0.1:" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
