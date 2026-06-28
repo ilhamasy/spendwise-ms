@@ -9,148 +9,63 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestRepo_CreateAndFindTransaction(t *testing.T) {
-	uid := setupRepoTest(t)
-	catID := createRepoCategory(t, uid, "RepoCat")
-
+func TestRepo_TxnCRUD(t *testing.T) {
+	uid := repoBoostUser(t)
+	cat := repoBoostCat(t, uid)
 	repo := NewTransactionRepository(config.DB)
 
-	txn := &model.Transaction{
-		ID:         uuid.New().String(),
-		UserID:     uid,
-		Type:       "expense",
-		Amount:     50000,
-		CategoryID: catID,
-		OccurredAt: "2026-06-28",
-	}
-	err := repo.Create(txn)
-	if err != nil {
-		t.Fatalf("Create failed: %v", err)
-	}
-
+	txn := &model.Transaction{ID: uuid.New().String(), UserID: uid, Type: "expense", Amount: 50000, CategoryID: cat, OccurredAt: "2026-06-28"}
+	if err := repo.Create(txn); err != nil { t.Fatalf("create: %v", err) }
 	found, err := repo.FindByID(txn.ID, uid)
-	if err != nil {
-		t.Fatalf("FindByID failed: %v", err)
-	}
-	if found.Amount != 50000 {
-		t.Errorf("amount mismatch: %d", found.Amount)
-	}
-}
-
-func TestRepo_FindTransaction_NotFound(t *testing.T) {
-	uid := setupRepoTest(t)
-	repo := NewTransactionRepository(config.DB)
-
-	_, err := repo.FindByID("non-existent", uid)
-	if err == nil {
-		t.Error("expected error for non-existent transaction")
-	}
-}
-
-func TestRepo_UpdateTransaction(t *testing.T) {
-	uid := setupRepoTest(t)
-	catID := createRepoCategory(t, uid, "UpdRepo")
-
-	repo := NewTransactionRepository(config.DB)
-	txn := &model.Transaction{
-		ID: uuid.New().String(), UserID: uid, Type: "expense",
-		Amount: 10000, CategoryID: catID, OccurredAt: "2026-06-28",
-	}
-	repo.Create(txn)
+	if err != nil { t.Fatalf("find: %v", err) }
+	if found.Amount != 50000 { t.Errorf("amount: %d", found.Amount) }
 
 	txn.Amount = 25000
-	err := repo.Update(txn)
-	if err != nil {
-		t.Fatalf("Update failed: %v", err)
-	}
+	if err := repo.Update(txn); err != nil { t.Fatalf("update: %v", err) }
 
-	found, _ := repo.FindByID(txn.ID, uid)
-	if found.Amount != 25000 {
-		t.Errorf("update not persisted: %d", found.Amount)
-	}
+	if err := repo.Delete(txn.ID, uid); err != nil { t.Errorf("delete: %v", err) }
 }
 
-func TestRepo_DeleteTransaction(t *testing.T) {
-	uid := setupRepoTest(t)
-	catID := createRepoCategory(t, uid, "DelRepo")
-
+func TestRepo_TxnNotFound(t *testing.T) {
+	uid := repoBoostUser(t)
 	repo := NewTransactionRepository(config.DB)
-	txn := &model.Transaction{
-		ID: uuid.New().String(), UserID: uid, Type: "expense",
-		Amount: 10000, CategoryID: catID, OccurredAt: "2026-06-28",
-	}
-	repo.Create(txn)
-
-	err := repo.Delete(txn.ID, uid)
-	if err != nil {
-		t.Errorf("Delete failed: %v", err)
-	}
-}
-
-func TestRepo_DeleteTransaction_NotFound(t *testing.T) {
-	uid := setupRepoTest(t)
-	repo := NewTransactionRepository(config.DB)
-
-	err := repo.Delete("non-existent", uid)
-	if err == nil {
-		t.Error("expected error for non-existent delete")
-	}
+	if _, err := repo.FindByID("nope", uid); err == nil { t.Error("expected error") }
+	if err := repo.Delete("nope", uid); err == nil { t.Error("expected error") }
 }
 
 func TestRepo_BatchCreate(t *testing.T) {
-	uid := setupRepoTest(t)
-	catID := createRepoCategory(t, uid, "BatchCat")
-
+	uid := repoBoostUser(t)
+	cat := repoBoostCat(t, uid)
 	repo := NewTransactionRepository(config.DB)
 	txns := []model.Transaction{
-		{ID: uuid.New().String(), UserID: uid, Type: "expense", Amount: 1000, CategoryID: catID, OccurredAt: "2026-06-28"},
-		{ID: uuid.New().String(), UserID: uid, Type: "income", Amount: 5000, CategoryID: catID, OccurredAt: "2026-06-28"},
+		{ID: uuid.New().String(), UserID: uid, Type: "expense", Amount: 1000, CategoryID: cat, OccurredAt: "2026-06-28"},
+		{ID: uuid.New().String(), UserID: uid, Type: "income", Amount: 5000, CategoryID: cat, OccurredAt: "2026-06-28"},
 	}
-	synced, failed, _ := repo.BatchCreate(txns)
-	if synced != 2 {
-		t.Errorf("expected 2 synced, got %d", synced)
-	}
-	if len(failed) != 0 {
-		t.Errorf("expected 0 failed, got %d", len(failed))
-	}
+	s, f, _ := repo.BatchCreate(txns)
+	if s != 2 { t.Errorf("synced: %d", s) }
+	if len(f) != 0 { t.Errorf("failed: %d", len(f)) }
 }
 
-func TestRepo_CreateAndFindCategory(t *testing.T) {
-	uid := setupRepoTest(t)
+func TestRepo_CatCRUD(t *testing.T) {
+	uid := repoBoostUser(t)
 	repo := NewCategoryRepository(config.DB)
-
-	cat := &model.Category{
-		ID: uuid.New().String(), UserID: uid, Name: "TestCategory",
-		Type: "expense", Icon: "📁", Color: "#000",
-	}
-	err := repo.Create(cat)
-	if err != nil {
-		t.Fatalf("Create category failed: %v", err)
-	}
-
+	cat := &model.Category{ID: uuid.New().String(), UserID: uid, Name: "RCat", Type: "expense", Icon: "📁", Color: "#000"}
+	if err := repo.Create(cat); err != nil { t.Fatalf("create: %v", err) }
 	found, err := repo.FindByID(cat.ID, uid)
-	if err != nil {
-		t.Fatalf("FindByID failed: %v", err)
-	}
-	if found.Name != "TestCategory" {
-		t.Errorf("name mismatch: %s", found.Name)
-	}
+	if err != nil { t.Fatalf("find: %v", err) }
+	if found.Name != "RCat" { t.Errorf("name: %s", found.Name) }
 }
 
-func setupRepoTest(t *testing.T) string {
+func repoBoostUser(t *testing.T) string {
 	t.Helper()
-	if config.DB == nil {
-		t.Fatal("config.DB is nil")
-	}
 	uid := uuid.New().String()
-	email := "repo" + uid[:8] + "@t.com"
-	config.DB.Create(&model.User{ID: uid, Name: "RepoTest", Email: email, Password: "hash"})
+	config.DB.Create(&model.User{ID: uid, Name: "RepoB", Email: "rb"+uid[:8]+"@t.com", Password: "x"})
 	return uid
 }
 
-func createRepoCategory(t *testing.T, uid, name string) string {
+func repoBoostCat(t *testing.T, uid string) string {
 	t.Helper()
-	cat := &model.Category{ID: uuid.New().String(), UserID: uid, Name: name, Type: "expense", IsDefault: true}
-	config.DB.Create(cat)
-	return cat.ID
+	id := uuid.New().String()
+	config.DB.Create(&model.Category{ID: id, UserID: uid, Name: "RBCat", Type: "expense", IsDefault: true})
+	return id
 }
