@@ -289,35 +289,7 @@ func TestHandler_AddContribution(t *testing.T) {
 	if w2.Code != http.StatusCreated { t.Errorf("Expected 201, got %d", w2.Code) }
 }
 
-func TestHandler_UpdateProfile(t *testing.T) {
-	setupTestDB()
-	uid, token := createBoostUser(t)
 
-	r := gin.New()
-	r.PUT("/me", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, UpdateProfile)
-
-	body, _ := json.Marshal(dto.UpdateProfileRequest{Name: "UpdatedName", Currency: "USD"})
-	req, _ := http.NewRequest("PUT", "/me", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK { t.Errorf("Expected 200, got %d: %s", w.Code, w.Body.String()) }
-}
-
-func TestHandler_ExportUserData(t *testing.T) {
-	setupTestDB()
-	uid, token := createBoostUser(t)
-
-	r := gin.New()
-	r.GET("/export", func(c *gin.Context) { c.Set("userId", uid); c.Next() }, ExportUserData)
-
-	req, _ := http.NewRequest("GET", "/export", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK { t.Errorf("Expected 200, got %d", w.Code) }
-}
 
 func TestHandler_DeleteGoal(t *testing.T) {
 	setupTestDB()

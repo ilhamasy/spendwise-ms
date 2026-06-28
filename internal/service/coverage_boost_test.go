@@ -136,3 +136,51 @@ func boostCat(t *testing.T, uid string) string {
 	return id
 }
 
+
+func TestBoostSvc_GetProfile(t *testing.T) {
+	hash, _ := HashPassword("x")
+	uid := uuid.New().String()
+	config.DB.Create(&model.User{ID: uid, Name: "GP", Email: "gp"+uid[:8]+"@t.com", Password: hash})
+	svc := NewProfileService(config.DB)
+	p, err := svc.GetProfile(uid)
+	if err != nil { t.Fatalf("GetProfile: %v", err) }
+	if p.ID != uid { t.Error("id mismatch") }
+}
+
+func TestBoostSvc_UpdateProfile(t *testing.T) {
+	hash, _ := HashPassword("x")
+	uid := uuid.New().String()
+	config.DB.Create(&model.User{ID: uid, Name: "UP", Email: "up"+uid[:8]+"@t.com", Password: hash})
+	svc := NewProfileService(config.DB)
+	p, err := svc.UpdateProfile(uid, dto.UpdateProfileRequest{Name: "NewName", Currency: "USD"})
+	if err != nil { t.Fatalf("UpdateProfile: %v", err) }
+	if p.Name != "NewName" { t.Errorf("name: %s", p.Name) }
+}
+
+func TestBoostSvc_ChangePassword(t *testing.T) {
+	hash, _ := HashPassword("old")
+	uid := uuid.New().String()
+	config.DB.Create(&model.User{ID: uid, Name: "CP", Email: "cp"+uid[:8]+"@t.com", Password: hash})
+	svc := NewProfileService(config.DB)
+	err := svc.ChangePassword(uid, "old", "newpass456")
+	if err != nil { t.Fatalf("ChangePassword: %v", err) }
+}
+
+func TestBoostSvc_ExportData(t *testing.T) {
+	hash, _ := HashPassword("x")
+	uid := uuid.New().String()
+	config.DB.Create(&model.User{ID: uid, Name: "ED", Email: "ed"+uid[:8]+"@t.com", Password: hash})
+	svc := NewProfileService(config.DB)
+	data, err := svc.ExportData(uid)
+	if err != nil { t.Fatalf("ExportData: %v", err) }
+	if data == nil { t.Error("nil data") }
+}
+
+func TestBoostSvc_DeleteAccount(t *testing.T) {
+	hash, _ := HashPassword("x")
+	uid := uuid.New().String()
+	config.DB.Create(&model.User{ID: uid, Name: "DA", Email: "da"+uid[:8]+"@t.com", Password: hash})
+	svc := NewProfileService(config.DB)
+	err := svc.DeleteAccount(uid, "DELETE")
+	if err != nil { t.Errorf("DeleteAccount: %v", err) }
+}
