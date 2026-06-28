@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -55,10 +56,10 @@ func rateLimit(limiter *rateLimiter) gin.HandlerFunc {
 
 		if limit.count >= limiter.global {
 			retryAfter := int(time.Until(limit.resetAt).Seconds())
-			c.Header("X-RateLimit-Limit", "100")
+			c.Header("X-RateLimit-Limit", strconv.Itoa(limiter.global))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("X-RateLimit-Reset", limit.resetAt.Format(time.RFC3339))
-			c.Header("Retry-After", string(rune(retryAfter)))
+			c.Header("Retry-After", strconv.Itoa(retryAfter))
 			limiter.mu.Unlock()
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"error":   "rate_limited",
@@ -69,8 +70,8 @@ func rateLimit(limiter *rateLimiter) gin.HandlerFunc {
 
 		limit.count++
 		remaining := limiter.global - limit.count
-		c.Header("X-RateLimit-Limit", "100")
-		c.Header("X-RateLimit-Remaining", string(rune(remaining)))
+		c.Header("X-RateLimit-Limit", strconv.Itoa(limiter.global))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
 		c.Header("X-RateLimit-Reset", limit.resetAt.Format(time.RFC3339))
 		limiter.mu.Unlock()
 		c.Next()
