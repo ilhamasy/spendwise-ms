@@ -1,0 +1,8 @@
+-- 000001_initial_schema.down.sql
+
+DROP TABLE IF EXISTS budgets CASCADE;
+DROP TABLE IF EXISTS goal_contributions CASCADE;
+DROP TABLE IF EXISTS saving_goals CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS users CASCADE;

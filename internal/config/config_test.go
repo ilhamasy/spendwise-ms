@@ -67,11 +67,15 @@ func TestCORS_NormalRequest(t *testing.T) {
 	r.GET("/test", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
 
 	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "http://localhost:3003")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Header().Get("Access-Control-Allow-Origin") != "*" {
-		t.Error("Expected CORS header Access-Control-Allow-Origin: *")
+	if w.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3003" {
+		t.Errorf("Expected CORS header Access-Control-Allow-Origin: http://localhost:3003, got %s", w.Header().Get("Access-Control-Allow-Origin"))
+	}
+	if w.Header().Get("Access-Control-Allow-Credentials") != "true" {
+		t.Error("Expected Access-Control-Allow-Credentials: true")
 	}
 	if w.Code != 200 {
 		t.Errorf("Expected 200, got %d", w.Code)

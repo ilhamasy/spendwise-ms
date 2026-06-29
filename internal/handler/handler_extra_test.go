@@ -60,9 +60,13 @@ func getAuthToken(t *testing.T, email, password string) string {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	var resp dto.AuthResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	return resp.AccessToken
+	for _, cookie := range w.Result().Cookies() {
+		if cookie.Name == "spendwise-access-token" {
+			return cookie.Value
+		}
+	}
+	t.Fatal("spendwise-access-token cookie not found in login response")
+	return ""
 }
 
 func TestGetCategories_Empty(t *testing.T) {

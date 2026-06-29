@@ -20,6 +20,7 @@ ENV TZ=Asia/Jakarta
 WORKDIR /app
 
 COPY --from=builder /app/spendwise-ms .
+COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 8080
 

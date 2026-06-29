@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -9,19 +10,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func extractToken(c *gin.Context) (string, error) {
+	token, err := c.Cookie("spendwise-access-token")
+	if err == nil && token != "" {
+		return token, nil
+	}
+
+	header := c.GetHeader("Authorization")
+	if header != "" {
+		return strings.TrimPrefix(header, "Bearer "), nil
+	}
+
+	if err != nil {
+		log.Printf("[auth] cookie error: %v, sending from: %s", err, c.Request.Header.Get("Origin"))
+	}
+	return "", http.ErrNoCookie
+}
+
 func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		if header == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "Missing authorization header"})
+		token, err := extractToken(c)
+		if err != nil || token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "Missing authentication token"})
 			c.Abort()
 			return
 		}
 
-		token := strings.TrimPrefix(header, "Bearer ")
 		claims, err := service.ValidateToken(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "Invalid or expired token"})
+			c.Abort()
+			return
+		}
+
+		if claims.TokenType != service.AccessToken {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "Token is not an access token"})
 			c.Abort()
 			return
 		}
@@ -34,13 +57,12 @@ func AuthRequired() gin.HandlerFunc {
 
 func OptionalAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		if header == "" {
+		token, err := extractToken(c)
+		if err != nil || token == "" {
 			c.Next()
 			return
 		}
 
-		token := strings.TrimPrefix(header, "Bearer ")
 		claims, err := service.ValidateToken(token)
 		if err != nil {
 			c.Next()

@@ -27,14 +27,12 @@ func TestLoginRequest_JSON(t *testing.T) {
 
 func TestAuthResponse_JSON(t *testing.T) {
 	resp := AuthResponse{
-		AccessToken:  "at",
-		RefreshToken: "rt",
-		User:         UserInfo{ID: "1", Name: "Test", Email: "test@test.com"},
+		User: UserInfo{ID: "1", Name: "Test", Email: "test@test.com"},
 	}
 	data, _ := json.Marshal(resp)
 	var parsed AuthResponse
 	json.Unmarshal(data, &parsed)
-	if parsed.AccessToken != "at" || parsed.User.Name != "Test" {
+	if parsed.User.Name != "Test" {
 		t.Error("AuthResponse mismatch")
 	}
 }

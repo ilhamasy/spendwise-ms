@@ -13,6 +13,16 @@ import (
 
 var validate = validator.New()
 
+func setTokenCookies(c *gin.Context, accessToken, refreshToken string) {
+	c.SetCookie("spendwise-access-token", accessToken, int(service.AccessTokenTTL.Seconds()), "/", "", false, true)
+	c.SetCookie("spendwise-refresh-token", refreshToken, int(service.RefreshTokenTTL.Seconds()), "/api/v1/auth/refresh", "", false, true)
+}
+
+func clearTokenCookies(c *gin.Context) {
+	c.SetCookie("spendwise-access-token", "", -1, "/", "", false, true)
+	c.SetCookie("spendwise-refresh-token", "", -1, "/api/v1/auth/refresh", "", false, true)
+}
+
 func Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,6 +45,8 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "server_error", Message: "Failed to generate tokens"})
 		return
 	}
+
+	setTokenCookies(c, accessToken, refreshToken)
 
 	c.JSON(http.StatusCreated, dto.AuthResponse{
 		AccessToken:  accessToken,
@@ -70,6 +82,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	setTokenCookies(c, accessToken, refreshToken)
+
 	c.JSON(http.StatusOK, dto.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -82,15 +96,20 @@ func Login(c *gin.Context) {
 }
 
 func RefreshToken(c *gin.Context) {
-	var req dto.RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	tokenString, err := c.Cookie("spendwise-refresh-token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Refresh token cookie missing"})
 		return
 	}
 
-	claims, err := service.ValidateToken(req.RefreshToken)
+	claims, err := service.ValidateToken(tokenString)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Invalid refresh token"})
+		return
+	}
+
+	if claims.TokenType != service.RefreshToken {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Token is not a refresh token"})
 		return
 	}
 
@@ -100,8 +119,15 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
+	setTokenCookies(c, accessToken, refreshToken)
+
 	c.JSON(http.StatusOK, dto.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	})
+}
+
+func Logout(c *gin.Context) {
+	clearTokenCookies(c)
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
 }

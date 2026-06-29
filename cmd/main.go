@@ -9,25 +9,33 @@ import (
 	"spendwise-ms/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not loaded: %v", err)
+	}
+
 	cfg := config.Load()
 
 	config.InitDB(cfg)
 
-	config.AutoMigrate(
-		&model.User{},
-		&model.Transaction{},
-		&model.Category{},
-		&model.SavingGoal{},
-		&model.GoalContribution{},
-		&model.Budget{},
-	)
+	if err := config.RunMigrations(cfg); err != nil {
+		log.Printf("Warning: Migration failed: %v", err)
+		log.Println("Falling back to AutoMigrate...")
+		config.AutoMigrate(
+			&model.User{},
+			&model.Transaction{},
+			&model.Category{},
+			&model.SavingGoal{},
+			&model.GoalContribution{},
+			&model.Budget{},
+		)
+	}
 
 	r := gin.Default()
 
-	r.Use(config.CORS())
 	r.Use(middleware.RateLimitGlobal())
 
 	r.GET("/health", handler.HealthCheck)
@@ -35,10 +43,12 @@ func main() {
 	v1 := r.Group("/api/v1")
 	{
 		auth := v1.Group("/auth")
+		auth.Use(middleware.RateLimitAuth())
 		{
 			auth.POST("/register", handler.Register)
 			auth.POST("/login", handler.Login)
 			auth.POST("/refresh", handler.RefreshToken)
+			auth.POST("/logout", handler.Logout)
 		}
 
 		users := v1.Group("/users/me")
@@ -110,8 +120,12 @@ func main() {
 	}
 	r.Static("/api/v1/docs", "./docs")
 
-	log.Printf("Server starting on port %s", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
+	addr := cfg.Host
+	if addr == "" {
+		addr = "127.0.0.1"
+	}
+	log.Printf("Server starting on %s:%s", addr, cfg.Port)
+	if err := r.Run(addr + ":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
