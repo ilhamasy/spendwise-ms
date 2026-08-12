@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,8 +42,8 @@ func getEnv(key, fallback string) string {
 }
 
 var allowedOrigins = []string{
-	"http://localhost:3003",
 	"http://localhost:3000",
+	"http://localhost:3003",
 	"https://spendwise.vercel.app",
 	"https://spendwise-web.vercel.app",
 }
@@ -50,14 +51,24 @@ var allowedOrigins = []string{
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		if origin == "" || !slices.Contains(allowedOrigins, origin) {
-			origin = allowedOrigins[0]
+		if origin != "" {
+			isAllowed := slices.Contains(allowedOrigins, origin) ||
+				strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:") ||
+				strings.HasPrefix(origin, "https://localhost:") ||
+				strings.HasPrefix(origin, "https://127.0.0.1:")
+			if isAllowed {
+				c.Header("Access-Control-Allow-Origin", origin)
+			} else {
+				c.Header("Access-Control-Allow-Origin", allowedOrigins[0])
+			}
+		} else {
+			c.Header("Access-Control-Allow-Origin", allowedOrigins[0])
 		}
 
-		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

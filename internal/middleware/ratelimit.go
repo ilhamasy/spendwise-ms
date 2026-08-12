@@ -30,13 +30,17 @@ func NewRateLimiter(global int, window time.Duration) *rateLimiter {
 }
 
 var globalLimiter = NewRateLimiter(100, 1*time.Minute)
-var authLimiter = NewRateLimiter(5, 1*time.Minute)
+var authLimiter = NewRateLimiter(30, 1*time.Minute)
 
 func rateLimit(limiter *rateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := c.GetString("userId")
 		if key == "" {
-			key = c.ClientIP()
+			if fwd := c.GetHeader("X-Forwarded-For"); fwd != "" {
+				key = fwd
+			} else {
+				key = c.ClientIP()
+			}
 		}
 		if key == "" {
 			c.Next()
