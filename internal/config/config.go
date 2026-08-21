@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"slices"
 	"strings"
@@ -21,7 +22,7 @@ type Config struct {
 }
 
 func Load() *Config {
-	return &Config{
+	cfg := &Config{
 		Host:               getEnv("HOST", ""),
 		Port:               getEnv("PORT", "8080"),
 		DBHost:             getEnv("DB_HOST", "localhost"),
@@ -32,6 +33,12 @@ func Load() *Config {
 		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
 		JWTSecret:          getEnv("JWT_SECRET", "spendwise-secret-key"),
 	}
+
+	if gin.Mode() == gin.ReleaseMode && cfg.JWTSecret == "spendwise-secret-key" {
+		log.Println("[SECURITY WARNING] OWASP A02: Using default JWT_SECRET in Release mode is insecure. Set JWT_SECRET in environment variables.")
+	}
+
+	return cfg
 }
 
 func getEnv(key, fallback string) string {

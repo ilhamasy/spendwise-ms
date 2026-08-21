@@ -14,13 +14,19 @@ import (
 var validate = validator.New()
 
 func setTokenCookies(c *gin.Context, accessToken, refreshToken string) {
-	c.SetCookie("spendwise-access-token", accessToken, int(service.AccessTokenTTL.Seconds()), "/", "", false, true)
-	c.SetCookie("spendwise-refresh-token", refreshToken, int(service.RefreshTokenTTL.Seconds()), "/api/v1/auth/refresh", "", false, true)
+	isSecure := c.Request != nil && (c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" || gin.Mode() == gin.ReleaseMode)
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("spendwise-access-token", accessToken, int(service.AccessTokenTTL.Seconds()), "/", "", isSecure, true)
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("spendwise-refresh-token", refreshToken, int(service.RefreshTokenTTL.Seconds()), "/api/v1/auth/refresh", "", isSecure, true)
 }
 
 func clearTokenCookies(c *gin.Context) {
-	c.SetCookie("spendwise-access-token", "", -1, "/", "", false, true)
-	c.SetCookie("spendwise-refresh-token", "", -1, "/api/v1/auth/refresh", "", false, true)
+	isSecure := c.Request != nil && (c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" || gin.Mode() == gin.ReleaseMode)
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("spendwise-access-token", "", -1, "/", "", isSecure, true)
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("spendwise-refresh-token", "", -1, "/api/v1/auth/refresh", "", isSecure, true)
 }
 
 func Register(c *gin.Context) {
