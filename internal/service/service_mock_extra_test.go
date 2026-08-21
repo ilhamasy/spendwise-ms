@@ -177,7 +177,7 @@ func (e *errCategoryRepo) FindAllForSync(_ string) ([]model.Category, error)    
 func (e *errCategoryRepo) Update(_ *model.Category) error                            { return errors.New("db error") }
 func (e *errCategoryRepo) Delete(_, _ string) error                                  { return errors.New("db error") }
 func (e *errCategoryRepo) FindByNameAndType(_, _, _ string) (*model.Category, error) { return nil, gorm.ErrRecordNotFound }
-func (e *errCategoryRepo) CountTransactionsByCategoryID(_ string) (int64, error)     { return 0, nil }
+func (e *errCategoryRepo) CountTransactionsByCategoryID(_, _ string) (int64, error)     { return 0, nil }
 func (e *errCategoryRepo) ReassignTransactions(_, _, _ string) error                  { return nil }
 
 func TestCatSvc_Create_DBError(t *testing.T) {

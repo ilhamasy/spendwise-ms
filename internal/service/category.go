@@ -75,6 +75,9 @@ func (s *CategoryService) UpdateCategory(userID, id string, req dto.UpdateCatego
 	if err != nil {
 		return nil, err
 	}
+	if cat.IsDefault {
+		return nil, errors.New("cannot update default category")
+	}
 
 	if req.Name != "" {
 		existing, _ := s.repo.FindByNameAndType(req.Name, cat.Type, userID)
@@ -107,7 +110,7 @@ func (s *CategoryService) DeleteCategory(userID, id, reassignToCategoryID string
 		return errors.New("cannot delete default category")
 	}
 
-	count, err := s.repo.CountTransactionsByCategoryID(id)
+	count, err := s.repo.CountTransactionsByCategoryID(id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to check transaction references: %w", err)
 	}

@@ -2,6 +2,7 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/dto"
@@ -218,13 +219,14 @@ func TestBudgetSpentCalculation(t *testing.T) {
 	svc := NewBudgetService(config.DB)
 	txnRepo := repository.NewTransactionRepository(config.DB)
 
+	today := time.Now().Format("2006-01-02")
 	txnRepo.Create(&model.Transaction{
 		UserID: userID, Type: "expense", Amount: 30000,
-		CategoryID: catID, OccurredAt: "2026-06-01",
+		CategoryID: catID, OccurredAt: today,
 	})
 	txnRepo.Create(&model.Transaction{
 		UserID: userID, Type: "expense", Amount: 20000,
-		CategoryID: catID, OccurredAt: "2026-06-01",
+		CategoryID: catID, OccurredAt: today,
 	})
 
 	resp, err := svc.CreateBudget(userID, dto.CreateBudgetRequest{

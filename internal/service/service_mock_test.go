@@ -66,7 +66,7 @@ func (m *mockCatRepo) Delete(id, _ string) error      { delete(m.store, id); ret
 func (m *mockCatRepo) FindByNameAndType(_, _, _ string) (*model.Category, error) {
 	return nil, gorm.ErrRecordNotFound
 }
-func (m *mockCatRepo) CountTransactionsByCategoryID(_ string) (int64, error) { return 0, nil }
+func (m *mockCatRepo) CountTransactionsByCategoryID(_, _ string) (int64, error) { return 0, nil }
 func (m *mockCatRepo) ReassignTransactions(_, _, _ string) error             { return nil }
 
 type mockGoalRepo struct {
