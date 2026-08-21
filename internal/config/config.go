@@ -17,6 +17,7 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBName     string
+	DBSSLMode  string
 	RedisAddr  string
 	JWTSecret  string
 }
@@ -30,6 +31,7 @@ func Load() *Config {
 		DBUser:             getEnv("DB_USER", "retnotc"),
 		DBPassword:         getEnv("DB_PASSWORD", ""),
 		DBName:             getEnv("DB_NAME", "spendwise_main_db"),
+		DBSSLMode:          getEnv("DB_SSLMODE", "disable"),
 		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
 		JWTSecret:          getEnv("JWT_SECRET", "spendwise-secret-key"),
 	}

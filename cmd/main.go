@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: .env file not loaded: %v", err)
+	if err := godotenv.Load(".env.local", "local.env", ".env.production", "prod.env", ".env"); err != nil {
+		log.Printf("Notice: Environment file load result: %v", err)
 	}
 
 	cfg := config.Load()
