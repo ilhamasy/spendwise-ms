@@ -46,7 +46,7 @@ func (s *GoalService) CreateGoal(userID string, req dto.CreateGoalRequest) (*dto
 
 	goal := model.SavingGoal{
 		UserID:       userID,
-		Name:         req.Name,
+		Name:         dto.SanitizeString(req.Name),
 		TargetAmount: req.TargetAmount,
 		CurrentSaved: req.CurrentSaved,
 		TargetDate:   req.TargetDate,
@@ -81,7 +81,7 @@ func (s *GoalService) UpdateGoal(userID, id string, req dto.UpdateGoalRequest) (
 	}
 
 	if req.Name != "" {
-		goal.Name = req.Name
+		goal.Name = dto.SanitizeString(req.Name)
 	}
 	if req.TargetAmount > 0 {
 		goal.TargetAmount = req.TargetAmount

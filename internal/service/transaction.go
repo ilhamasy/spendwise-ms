@@ -53,7 +53,7 @@ func (s *TransactionService) CreateTransaction(userID string, req dto.CreateTran
 		Amount:     req.Amount,
 		CategoryID: cat.ID,
 		OccurredAt: req.OccurredAt,
-		Note:       req.Note,
+		Note:       dto.SanitizeString(req.Note),
 	}
 
 	if err := s.repo.Create(&tx); err != nil {
@@ -144,7 +144,7 @@ func (s *TransactionService) UpdateTransaction(userID, id string, req dto.Update
 		existing.OccurredAt = req.OccurredAt
 	}
 	if req.Note != "" {
-		existing.Note = req.Note
+		existing.Note = dto.SanitizeString(req.Note)
 	}
 
 	if err := s.repo.Update(existing); err != nil {
