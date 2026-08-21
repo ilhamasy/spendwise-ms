@@ -235,14 +235,14 @@ func TestGetTransactions_Search(t *testing.T) {
 		Type:       "expense",
 		Amount:     12000,
 		CategoryID: cat.ID,
-		OccurredAt: time.Now().Format("2006-01-02"),
+		OccurredAt: "2026-08-21",
 		Note:       "Starbucks coffee",
 	})
 	svc.CreateTransaction("test-user-1", dto.CreateTransactionRequest{
 		Type:       "expense",
 		Amount:     25000,
 		CategoryID: cat.ID,
-		OccurredAt: time.Now().Format("2006-01-02"),
+		OccurredAt: "2026-08-21",
 		Note:       "Grocery shopping",
 	})
 

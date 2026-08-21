@@ -322,3 +322,43 @@ func TestSyncTransactions_Handler(t *testing.T) {
 		t.Errorf("Expected 200, got %d", w.Code)
 	}
 }
+
+func TestHandler_ValidationErrors(t *testing.T) {
+	uid, token := setupTE(t)
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set("userId", uid); c.Next() })
+
+	r.POST("/categories", CreateCategory)
+	r.PUT("/categories/:id", UpdateCategory)
+	r.POST("/budgets", CreateBudget)
+	r.PUT("/budgets/:id", UpdateBudget)
+	r.POST("/goals", CreateGoal)
+	r.PUT("/goals/:id", UpdateGoal)
+	r.POST("/goals/:id/contributions", AddContribution)
+	r.POST("/sync", SyncData)
+
+	endpoints := []struct {
+		method string
+		path   string
+	}{
+		{"POST", "/categories"},
+		{"PUT", "/categories/123"},
+		{"POST", "/budgets"},
+		{"PUT", "/budgets/123"},
+		{"POST", "/goals"},
+		{"PUT", "/goals/123"},
+		{"POST", "/goals/123/contributions"},
+		{"POST", "/sync"},
+	}
+
+	for _, ep := range endpoints {
+		req, _ := http.NewRequest(ep.method, ep.path, bytes.NewBufferString("invalid json"))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected 400 for invalid JSON on %s %s, got %d", ep.method, ep.path, w.Code)
+		}
+	}
+}

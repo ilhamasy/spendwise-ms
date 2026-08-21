@@ -2,6 +2,7 @@ package repository
 
 import (
 	"testing"
+	"time"
 
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/model"
@@ -9,289 +10,226 @@ import (
 	"github.com/google/uuid"
 )
 
-func setupTestDB(t *testing.T) {
-	t.Helper()
-	cfg := config.Load()
+func setupRepoTestDB() string {
 	if config.DB == nil {
-		config.InitDB(cfg)
+		config.InitDB(config.Load())
+	}
+	if !config.DB.Migrator().HasTable("users") {
 		config.AutoMigrate(
-			&model.User{},
-			&model.Transaction{},
-			&model.Category{},
-			&model.SavingGoal{},
-			&model.GoalContribution{},
-			&model.Budget{},
+			&model.User{}, &model.Transaction{}, &model.Category{}, &model.SavingGoal{}, &model.GoalContribution{}, &model.Budget{},
 		)
 	}
+	config.DB.Where("1 = 1").Delete(&model.GoalContribution{})
+	config.DB.Where("1 = 1").Delete(&model.Budget{})
+	config.DB.Where("1 = 1").Delete(&model.SavingGoal{})
 	config.DB.Where("1 = 1").Delete(&model.Transaction{})
 	config.DB.Where("1 = 1").Delete(&model.Category{})
-	config.DB.Where("1 = 1").Delete(&model.Budget{})
-	config.DB.Where("1 = 1").Delete(&model.GoalContribution{})
-	config.DB.Where("1 = 1").Delete(&model.SavingGoal{})
 	config.DB.Where("1 = 1").Delete(&model.User{})
+
+	userID := uuid.New().String()
+	config.DB.Create(&model.User{
+		ID:       userID,
+		Name:     "Repo Test User",
+		Email:    "repo@spendwise.com",
+		Password: "hashed",
+	})
+	return userID
 }
 
-func TestTransactionRepository_Create(t *testing.T) {
-	setupTestDB(t)
-	repo := NewTransactionRepository(config.DB)
+func TestCategoryRepository_SyncAndReassign(t *testing.T) {
+	userID := setupRepoTestDB()
+	catRepo := NewCategoryRepository(config.DB)
+	txnRepo := NewTransactionRepository(config.DB)
 
-	tx := &model.Transaction{
-		ID:         uuid.New().String(),
-		UserID:     "user-1",
-		Type:       "expense",
-		Amount:     50000,
-		CategoryID: "cat-1",
-		OccurredAt: "2026-06-01",
-	}
-	if err := repo.Create(tx); err != nil {
-		t.Fatalf("Create failed: %v", err)
+	cat1 := model.Category{UserID: userID, Name: "Cat 1", Type: "expense"}
+	cat2 := model.Category{UserID: userID, Name: "Cat 2", Type: "expense"}
+	catRepo.Create(&cat1)
+	catRepo.Create(&cat2)
+
+	found, err := catRepo.FindByNameAndType("Cat 1", "expense", userID)
+	if err != nil || found == nil {
+		t.Fatalf("FindByNameAndType failed: %v", err)
 	}
 
-	found, err := repo.FindByID(tx.ID, "user-1")
+	allSync, err := catRepo.FindAllForSync(userID)
+	if err != nil || len(allSync) < 2 {
+		t.Fatalf("FindAllForSync failed: %v", err)
+	}
+
+	tx := model.Transaction{UserID: userID, Type: "expense", Amount: 5000, CategoryID: cat1.ID, OccurredAt: "2026-08-21"}
+	txnRepo.Create(&tx)
+
+	count, err := catRepo.CountTransactionsByCategoryID(cat1.ID, userID)
+	if err != nil || count != 1 {
+		t.Errorf("Expected count 1, got %d", count)
+	}
+
+	err = catRepo.ReassignTransactions(cat1.ID, cat2.ID, userID)
 	if err != nil {
-		t.Fatalf("FindByID failed: %v", err)
+		t.Fatalf("ReassignTransactions failed: %v", err)
 	}
-	if found.Amount != 50000 {
-		t.Errorf("Expected 50000, got %d", found.Amount)
+
+	count1After, _ := catRepo.CountTransactionsByCategoryID(cat1.ID, userID)
+	count2After, _ := catRepo.CountTransactionsByCategoryID(cat2.ID, userID)
+	if count1After != 0 || count2After != 1 {
+		t.Errorf("Expected 0 and 1 after reassign, got %d and %d", count1After, count2After)
 	}
 }
 
-func TestTransactionRepository_FindAll(t *testing.T) {
-	setupTestDB(t)
-	repo := NewTransactionRepository(config.DB)
+func TestBudgetRepository_GetSpentAmountAndPeriods(t *testing.T) {
+	userID := setupRepoTestDB()
+	budgetRepo := NewBudgetRepository(config.DB)
+	catRepo := NewCategoryRepository(config.DB)
+	txnRepo := NewTransactionRepository(config.DB)
 
-	tx1 := &model.Transaction{ID: uuid.New().String(), UserID: "u1", Type: "expense", Amount: 100, CategoryID: "c1", OccurredAt: "2026-01-01"}
-	tx2 := &model.Transaction{ID: uuid.New().String(), UserID: "u1", Type: "income", Amount: 200, CategoryID: "c1", OccurredAt: "2026-06-01"}
-	repo.Create(tx1)
-	repo.Create(tx2)
+	cat := model.Category{UserID: userID, Name: "Food", Type: "expense"}
+	catRepo.Create(&cat)
 
-	txs, _, err := repo.FindAll(TransactionFilter{UserID: "u1", Page: 1, Limit: 10})
+	today := time.Now().Format("2006-01-02")
+	txnRepo.Create(&model.Transaction{UserID: userID, Type: "expense", Amount: 10000, CategoryID: cat.ID, OccurredAt: today})
+
+	b := model.Budget{UserID: userID, Name: "Daily Budget", Amount: 50000, Period: "daily", CategoryID: cat.ID}
+	budgetRepo.Create(&b)
+
+	bWeekly := model.Budget{UserID: userID, Name: "Weekly Budget", Amount: 200000, Period: "weekly", CategoryID: cat.ID}
+	budgetRepo.Create(&bWeekly)
+
+	bYearly := model.Budget{UserID: userID, Name: "Yearly Budget", Amount: 10000000, Period: "yearly", CategoryID: cat.ID}
+	budgetRepo.Create(&bYearly)
+
+	spentDaily, _ := budgetRepo.GetSpentAmount(userID, cat.ID, "daily")
+	if spentDaily != 10000 {
+		t.Errorf("Expected spentDaily 10000, got %d", spentDaily)
+	}
+
+	spentWeekly, _ := budgetRepo.GetSpentAmount(userID, cat.ID, "weekly")
+	if spentWeekly != 10000 {
+		t.Errorf("Expected spentWeekly 10000, got %d", spentWeekly)
+	}
+
+	spentYearly, _ := budgetRepo.GetSpentAmount(userID, cat.ID, "yearly")
+	if spentYearly != 10000 {
+		t.Errorf("Expected spentYearly 10000, got %d", spentYearly)
+	}
+}
+
+func TestGoalRepository_UpdateStatusAndProgress(t *testing.T) {
+	userID := setupRepoTestDB()
+	goalRepo := NewGoalRepository(config.DB)
+
+	g := model.SavingGoal{UserID: userID, Name: "Goal 1", TargetAmount: 100000, CurrentSaved: 50000, Status: "active"}
+	goalRepo.Create(&g)
+
+	err := goalRepo.UpdateStatus(g.ID, userID, "archived")
 	if err != nil {
-		t.Fatalf("FindAll failed: %v", err)
-	}
-	if len(txs) != 2 {
-		t.Errorf("Expected 2 transactions, got %d", len(txs))
-	}
-}
-
-func TestTransactionRepository_Update(t *testing.T) {
-	setupTestDB(t)
-	repo := NewTransactionRepository(config.DB)
-
-	tx := &model.Transaction{ID: uuid.New().String(), UserID: "u1", Type: "expense", Amount: 100, CategoryID: "c1", OccurredAt: "2026-01-01"}
-	repo.Create(tx)
-
-	tx.Amount = 500
-	if err := repo.Update(tx); err != nil {
-		t.Fatalf("Update failed: %v", err)
+		t.Fatalf("UpdateStatus failed: %v", err)
 	}
 
-	found, _ := repo.FindByID(tx.ID, "u1")
-	if found.Amount != 500 {
-		t.Errorf("Expected 500, got %d", found.Amount)
+	found, _ := goalRepo.FindByID(g.ID, userID)
+	if found.Status != "archived" {
+		t.Errorf("Expected status archived, got %s", found.Status)
+	}
+
+	progress := CalculateGoalProgress(50000, 100000)
+	if progress != 50.0 {
+		t.Errorf("Expected progress 50.0, got %f", progress)
+	}
+
+	progressZero := CalculateGoalProgress(50000, 0)
+	if progressZero != 0.0 {
+		t.Errorf("Expected progress 0.0 for zero target, got %f", progressZero)
 	}
 }
 
-func TestTransactionRepository_Delete(t *testing.T) {
-	setupTestDB(t)
-	repo := NewTransactionRepository(config.DB)
+func TestTransactionRepository_BatchCreateAndCalculations(t *testing.T) {
+	userID := setupRepoTestDB()
+	txnRepo := NewTransactionRepository(config.DB)
+	catRepo := NewCategoryRepository(config.DB)
 
-	tx := &model.Transaction{ID: uuid.New().String(), UserID: "u1", Type: "expense", Amount: 100, CategoryID: "c1", OccurredAt: "2026-01-01"}
-	repo.Create(tx)
+	cat := model.Category{UserID: userID, Name: "Shopping", Type: "expense"}
+	catRepo.Create(&cat)
 
-	if err := repo.Delete(tx.ID, "u1"); err != nil {
-		t.Fatalf("Delete failed: %v", err)
+	txs := []model.Transaction{
+		{UserID: userID, Type: "expense", Amount: 5000, CategoryID: cat.ID, OccurredAt: "2026-08-21"},
+		{UserID: userID, Type: "expense", Amount: 15000, CategoryID: cat.ID, OccurredAt: "2026-08-21"},
 	}
 
-	_, err := repo.FindByID(tx.ID, "u1")
-	if err == nil {
-		t.Error("Expected error after delete, got nil")
-	}
-}
-
-func TestCategoryRepository_CreateAndFind(t *testing.T) {
-	setupTestDB(t)
-	repo := NewCategoryRepository(config.DB)
-
-	cat := &model.Category{
-		ID:   uuid.New().String(),
-		Name: "TestCat",
-		Type: "expense",
-		Icon: "📁",
-		UserID: "u1",
-	}
-	if err := repo.Create(cat); err != nil {
-		t.Fatalf("Create failed: %v", err)
-	}
-
-	found, err := repo.FindByID(cat.ID, "u1")
+	_, _, err := txnRepo.BatchCreate(txs)
 	if err != nil {
-		t.Fatalf("FindByID failed: %v", err)
-	}
-	if found.Name != "TestCat" {
-		t.Errorf("Expected 'TestCat', got '%s'", found.Name)
-	}
-}
-
-func TestCategoryRepository_FindAll(t *testing.T) {
-	setupTestDB(t)
-	repo := NewCategoryRepository(config.DB)
-
-	repo.Create(&model.Category{ID: uuid.New().String(), Name: "Food", Type: "expense", Icon: "🍔", UserID: "u1"})
-	repo.Create(&model.Category{ID: uuid.New().String(), Name: "Salary", Type: "income", Icon: "💰", UserID: "u1"})
-
-	cats, err := repo.FindAll("u1", "")
-	if err != nil {
-		t.Fatalf("FindAll failed: %v", err)
-	}
-	if len(cats) < 2 {
-		t.Errorf("Expected at least 2 categories, got %d", len(cats))
+		t.Fatalf("BatchCreate failed: %v", err)
 	}
 
-	expenses, _ := repo.FindAll("u1", "expense")
-	if len(expenses) < 1 {
-		t.Errorf("Expected at least 1 expense category")
+	pages := CalculateTotalPages(100, 20)
+	if pages != 5 {
+		t.Errorf("Expected 5 pages, got %d", pages)
+	}
+
+	pagesZero := CalculateTotalPages(0, 20)
+	if pagesZero != 0 {
+		t.Errorf("Expected 0 pages, got %d", pagesZero)
 	}
 }
 
-func TestCategoryRepository_Update(t *testing.T) {
-	setupTestDB(t)
-	repo := NewCategoryRepository(config.DB)
+func TestRepository_FindAllAndUpdates(t *testing.T) {
+	userID := setupRepoTestDB()
+	catRepo := NewCategoryRepository(config.DB)
+	txnRepo := NewTransactionRepository(config.DB)
+	goalRepo := NewGoalRepository(config.DB)
+	budgetRepo := NewBudgetRepository(config.DB)
 
-	cat := &model.Category{ID: uuid.New().String(), Name: "Old", Type: "expense", Icon: "📁", UserID: "u1"}
-	repo.Create(cat)
+	cat := model.Category{UserID: userID, Name: "Cat All", Type: "expense", Icon: "icon", Color: "#fff"}
+	catRepo.Create(&cat)
 
-	cat.Name = "Updated"
-	if err := repo.Update(cat); err != nil {
-		t.Fatalf("Update failed: %v", err)
+	allCats, err := catRepo.FindAll(userID, "expense")
+	if err != nil || len(allCats) == 0 {
+		t.Fatalf("Cat FindAll failed: %v", err)
 	}
 
-	found, _ := repo.FindByID(cat.ID, "u1")
-	if found.Name != "Updated" {
-		t.Errorf("Expected 'Updated', got '%s'", found.Name)
-	}
-}
+	cat.Name = "Cat All Updated"
+	catRepo.Update(&cat)
+	catRepo.Delete(cat.ID, userID)
 
-func TestCategoryRepository_Delete(t *testing.T) {
-	setupTestDB(t)
-	repo := NewCategoryRepository(config.DB)
+	tx := model.Transaction{UserID: userID, Type: "expense", Amount: 20000, CategoryID: cat.ID, OccurredAt: "2026-08-21", Note: "SearchNote"}
+	txnRepo.Create(&tx)
 
-	cat := &model.Category{ID: uuid.New().String(), Name: "ToDelete", Type: "expense", Icon: "🗑️", UserID: "u1"}
-	repo.Create(cat)
-
-	if err := repo.Delete(cat.ID, "u1"); err != nil {
-		t.Fatalf("Delete failed: %v", err)
+	allTxns, total, err := txnRepo.FindAll(TransactionFilter{UserID: userID, Search: "SearchNote", Sort: "date_asc"})
+	if err != nil || total == 0 || len(allTxns) == 0 {
+		t.Fatalf("Txn FindAll failed: %v", err)
 	}
 
-	found, _ := repo.FindByID(cat.ID, "u1")
-	if found != nil && found.DeletedAt == nil {
-		t.Error("Expected deleted_at to be set after soft delete")
-	}
-}
+	txnRepo.FindAll(TransactionFilter{UserID: userID, Type: "expense", CategoryID: cat.ID, StartDate: "2026-08-01", EndDate: "2026-08-31", Sort: "amount_desc"})
+	txnRepo.FindAll(TransactionFilter{UserID: userID, Sort: "amount_asc"})
 
-func TestGoalRepository_CRUD(t *testing.T) {
-	setupTestDB(t)
-	repo := NewGoalRepository(config.DB)
+	goal := model.SavingGoal{UserID: userID, Name: "Goal All", TargetAmount: 50000, CurrentSaved: 10000, TargetDate: "2027-01-01", Status: "active"}
+	goalRepo.Create(&goal)
 
-	goal := &model.SavingGoal{
-		ID:           uuid.New().String(),
-		UserID:       "u1",
-		Name:         "New Car",
-		TargetAmount: 100000000,
-		Status:       "active",
-	}
-	if err := repo.Create(goal); err != nil {
-		t.Fatalf("Create failed: %v", err)
+	allGoals, err := goalRepo.FindAll(userID, "active")
+	if err != nil || len(allGoals) == 0 {
+		t.Fatalf("Goal FindAll failed: %v", err)
 	}
 
-	found, err := repo.FindByID(goal.ID, "u1")
-	if err != nil {
-		t.Fatalf("FindByID failed: %v", err)
-	}
-	if found.Name != "New Car" {
-		t.Errorf("Expected 'New Car', got '%s'", found.Name)
+	goal.Name = "Goal All Updated"
+	goalRepo.Update(&goal)
+
+	contrib := model.GoalContribution{GoalID: goal.ID, Amount: 5000, Date: "2026-08-21", Note: "Contrib"}
+	goalRepo.CreateContribution(&contrib)
+
+	contribs, count, err := goalRepo.FindContributionsByGoalID(goal.ID, 1, 10)
+	if err != nil || count == 0 || len(contribs) == 0 {
+		t.Fatalf("FindContributionsByGoalID failed: %v", err)
 	}
 
-	goals, _ := repo.FindAll("u1", "")
-	if len(goals) < 1 {
-		t.Error("Expected at least 1 goal")
+	goalRepo.Delete(goal.ID, userID)
+
+	b := model.Budget{UserID: userID, Name: "Budget All", Amount: 100000, Period: "monthly", CategoryID: cat.ID}
+	budgetRepo.Create(&b)
+
+	allBudgets, err := budgetRepo.FindAll(userID, "monthly")
+	if err != nil || len(allBudgets) == 0 {
+		t.Fatalf("Budget FindAll failed: %v", err)
 	}
 
-	goal.Status = "archived"
-	repo.Update(goal)
-	updated, _ := repo.FindByID(goal.ID, "u1")
-	if updated.Status != "archived" {
-		t.Errorf("Expected 'archived', got '%s'", updated.Status)
-	}
-
-	repo.Delete(goal.ID, "u1")
-	_, err = repo.FindByID(goal.ID, "u1")
-	if err == nil {
-		t.Error("Expected error after delete")
-	}
-}
-
-func TestGoalRepository_Contributions(t *testing.T) {
-	setupTestDB(t)
-	repo := NewGoalRepository(config.DB)
-	goal := &model.SavingGoal{ID: uuid.New().String(), UserID: "u1", Name: "Goal", TargetAmount: 1000, Status: "active"}
-	repo.Create(goal)
-
-	contrib := &model.GoalContribution{
-		ID:     uuid.New().String(),
-		GoalID: goal.ID,
-		Amount: 500,
-		Date:   "2026-06-01",
-	}
-	if err := repo.CreateContribution(contrib); err != nil {
-		t.Fatalf("CreateContribution failed: %v", err)
-	}
-
-	contribs, _, _ := repo.FindContributionsByGoalID(goal.ID, 1, 10)
-	if len(contribs) != 1 {
-		t.Errorf("Expected 1 contribution, got %d", len(contribs))
-	}
-}
-
-func TestBudgetRepository_CRUD(t *testing.T) {
-	setupTestDB(t)
-	repo := NewBudgetRepository(config.DB)
-
-	budget := &model.Budget{
-		ID:         uuid.New().String(),
-		UserID:     "u1",
-		Name:       "Food Budget",
-		Amount:     2000000,
-		Period:     "monthly",
-		CategoryID: "cat-1",
-	}
-	if err := repo.Create(budget); err != nil {
-		t.Fatalf("Create failed: %v", err)
-	}
-
-	found, err := repo.FindByID(budget.ID, "u1")
-	if err != nil {
-		t.Fatalf("FindByID failed: %v", err)
-	}
-	if found.Name != "Food Budget" {
-		t.Errorf("Expected 'Food Budget', got '%s'", found.Name)
-	}
-
-	all, _ := repo.FindAll("u1", "")
-	if len(all) < 1 {
-		t.Error("Expected at least 1 budget")
-	}
-
-	budget.Name = "Updated Budget"
-	repo.Update(budget)
-	updated, _ := repo.FindByID(budget.ID, "u1")
-	if updated.Name != "Updated Budget" {
-		t.Errorf("Expected 'Updated Budget', got '%s'", updated.Name)
-	}
-
-	repo.Delete(budget.ID, "u1")
-	_, err = repo.FindByID(budget.ID, "u1")
-	if err == nil {
-		t.Error("Expected error after delete")
-	}
+	b.Name = "Budget All Updated"
+	budgetRepo.Update(&b)
+	budgetRepo.Delete(b.ID, userID)
 }

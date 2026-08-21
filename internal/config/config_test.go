@@ -86,6 +86,8 @@ func TestInitDB(t *testing.T) {
 	cfg := Load()
 	cfg.DBName = "spendwise_main_db"
 	if DB != nil {
+		AutoMigrate()
+		RunMigrations(cfg)
 		return
 	}
 	defer func() {

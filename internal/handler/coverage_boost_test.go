@@ -223,10 +223,14 @@ func createBoostUser(t *testing.T) (string, string) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
+	var resp dto.AuthResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err == nil && resp.AccessToken != "" {
+		return uid, resp.AccessToken
+	}
 	for _, c := range w.Result().Cookies() {
 		if c.Name == "spendwise-access-token" { return uid, c.Value }
 	}
-	t.Fatal("no access token")
+	t.Fatalf("no access token: %s", w.Body.String())
 	return "", ""
 }
 
