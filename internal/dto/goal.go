@@ -4,15 +4,15 @@ import "time"
 
 type CreateGoalRequest struct {
 	Name         string `json:"name" validate:"required,min=1,max=100"`
-	TargetAmount int64  `json:"targetAmount" validate:"required,gt=0"`
-	CurrentSaved int64  `json:"currentSaved" validate:"omitempty,gte=0"`
+	TargetAmount int64  `json:"targetAmount" validate:"required,gt=0,lte=1000000000000"`
+	CurrentSaved int64  `json:"currentSaved" validate:"omitempty,gte=0,lte=1000000000000"`
 	TargetDate   string `json:"targetDate" validate:"omitempty,datetime=2006-01-02"`
 }
 
 type UpdateGoalRequest struct {
 	Name         string `json:"name" validate:"omitempty,min=1,max=100"`
-	TargetAmount int64  `json:"targetAmount" validate:"omitempty,gt=0"`
-	CurrentSaved int64  `json:"currentSaved" validate:"omitempty,gte=0"`
+	TargetAmount int64  `json:"targetAmount" validate:"omitempty,gt=0,lte=1000000000000"`
+	CurrentSaved int64  `json:"currentSaved" validate:"omitempty,gte=0,lte=1000000000000"`
 	TargetDate   string `json:"targetDate" validate:"omitempty,datetime=2006-01-02"`
 }
 
@@ -33,7 +33,7 @@ type GoalListResponse struct {
 }
 
 type CreateContributionRequest struct {
-	Amount int64  `json:"amount" validate:"required,gt=0"`
+	Amount int64  `json:"amount" validate:"required,gt=0,lte=1000000000000"`
 	Note   string `json:"note" validate:"max=200"`
 	Date   string `json:"date" validate:"omitempty,datetime=2006-01-02"`
 }

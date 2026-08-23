@@ -30,7 +30,7 @@ func NewRateLimiter(global int, window time.Duration) *rateLimiter {
 }
 
 var globalLimiter = NewRateLimiter(100, 1*time.Minute)
-var authLimiter = NewRateLimiter(30, 1*time.Minute)
+var authLimiter = NewRateLimiter(10, 1*time.Minute)
 
 func rateLimit(limiter *rateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -44,6 +44,13 @@ func (s *GoalService) CreateGoal(userID string, req dto.CreateGoalRequest) (*dto
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
+	if req.TargetDate != "" {
+		today := time.Now().Format("2006-01-02")
+		if req.TargetDate < today {
+			return nil, fmt.Errorf("target date cannot be in the past")
+		}
+	}
+
 	goal := model.SavingGoal{
 		UserID:       userID,
 		Name:         dto.SanitizeString(req.Name),
