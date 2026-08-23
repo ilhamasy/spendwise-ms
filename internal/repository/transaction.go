@@ -97,7 +97,7 @@ func (r *TransactionRepository) FindAll(filter TransactionFilter) ([]model.Trans
 }
 
 func (r *TransactionRepository) Update(tx *model.Transaction) error {
-	return r.db.Model(&model.Transaction{}).Where("id = ? AND user_id = ?", tx.ID, tx.UserID).Updates(map[string]interface{}{
+	return r.db.Model(tx).Where("user_id = ?", tx.UserID).Updates(map[string]interface{}{
 		"type":        tx.Type,
 		"amount":      tx.Amount,
 		"category_id": tx.CategoryID,

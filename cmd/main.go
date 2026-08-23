@@ -37,6 +37,7 @@ func main() {
 	r := gin.Default()
 
 	r.Use(config.CORS())
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.RateLimitGlobal())
 
 	r.GET("/health", handler.HealthCheck)

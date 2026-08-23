@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -102,37 +103,48 @@ func (s *GoalService) UpdateGoal(userID, id string, req dto.UpdateGoalRequest) (
 		return nil, fmt.Errorf("failed to update goal: %w", err)
 	}
 
-	updated, _ := s.repo.FindByID(id, userID)
+	updated, err := s.repo.FindByID(id, userID)
+	if err != nil || updated == nil {
+		updated = goal
+	}
 	resp := goalToResponse(*updated)
 	return &resp, nil
 }
 
 func (s *GoalService) ArchiveGoal(userID, id string) (*dto.GoalResponse, error) {
-	_, err := s.repo.FindByID(id, userID)
-	if err != nil {
-		return nil, err
+	existing, err := s.repo.FindByID(id, userID)
+	if err != nil || existing == nil {
+		return nil, errors.New("goal not found")
 	}
 
 	if err := s.repo.UpdateStatus(id, userID, "archived"); err != nil {
 		return nil, fmt.Errorf("failed to archive goal: %w", err)
 	}
 
-	goal, _ := s.repo.FindByID(id, userID)
+	goal, err := s.repo.FindByID(id, userID)
+	if err != nil || goal == nil {
+		goal = existing
+		goal.Status = "archived"
+	}
 	resp := goalToResponse(*goal)
 	return &resp, nil
 }
 
 func (s *GoalService) UnarchiveGoal(userID, id string) (*dto.GoalResponse, error) {
-	_, err := s.repo.FindByID(id, userID)
-	if err != nil {
-		return nil, err
+	existing, err := s.repo.FindByID(id, userID)
+	if err != nil || existing == nil {
+		return nil, errors.New("goal not found")
 	}
 
 	if err := s.repo.UpdateStatus(id, userID, "active"); err != nil {
 		return nil, fmt.Errorf("failed to unarchive goal: %w", err)
 	}
 
-	goal, _ := s.repo.FindByID(id, userID)
+	goal, err := s.repo.FindByID(id, userID)
+	if err != nil || goal == nil {
+		goal = existing
+		goal.Status = "active"
+	}
 	resp := goalToResponse(*goal)
 	return &resp, nil
 }
