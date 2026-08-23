@@ -103,8 +103,14 @@ func Login(c *gin.Context) {
 
 func RefreshToken(c *gin.Context) {
 	tokenString, err := c.Cookie("spendwise-refresh-token")
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Refresh token cookie missing"})
+	if err != nil || tokenString == "" {
+		var req dto.RefreshRequest
+		if bindErr := c.ShouldBindJSON(&req); bindErr == nil && req.RefreshToken != "" {
+			tokenString = req.RefreshToken
+		}
+	}
+	if tokenString == "" {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Refresh token is missing"})
 		return
 	}
 

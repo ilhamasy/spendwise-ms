@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"spendwise-ms/internal/model"
@@ -97,7 +98,30 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
+var weakPasswords = map[string]bool{
+	"12345678":  true,
+	"password":  true,
+	"admin123":  true,
+	"spendwise": true,
+	"qwertyui":  true,
+}
+
+func ValidatePasswordStrength(password string) error {
+	trimmed := strings.TrimSpace(password)
+	if len(trimmed) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
+	if weakPasswords[strings.ToLower(trimmed)] {
+		return errors.New("password is too common or weak")
+	}
+	return nil
+}
+
 func Register(db *gorm.DB, name, email, password string) (*model.User, error) {
+	if err := ValidatePasswordStrength(password); err != nil {
+		return nil, err
+	}
+
 	var existing model.User
 	if err := db.Where("email = ?", email).First(&existing).Error; err == nil {
 		return nil, errors.New("email already registered")
