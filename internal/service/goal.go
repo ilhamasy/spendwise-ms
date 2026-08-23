@@ -184,7 +184,10 @@ func (s *GoalService) AddContribution(userID, goalID string, req dto.CreateContr
 		return nil, nil, fmt.Errorf("failed to update goal progress: %w", err)
 	}
 
-	updatedGoal, _ := s.repo.FindByID(goalID, userID)
+	updatedGoal, err := s.repo.FindByID(goalID, userID)
+	if err != nil || updatedGoal == nil {
+		updatedGoal = goal
+	}
 	contribResp := contributionToResponse(contribution)
 	goalResp := goalToResponse(*updatedGoal)
 	return &contribResp, &goalResp, nil

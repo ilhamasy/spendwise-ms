@@ -170,6 +170,9 @@ func (s *TransactionService) SyncTransactions(userID string, req dto.SyncRequest
 	if len(req.Transactions) == 0 {
 		return nil, fmt.Errorf("at least one transaction is required")
 	}
+	if len(req.Transactions) > 500 {
+		return nil, fmt.Errorf("batch size exceeds limit of 500 transactions")
+	}
 
 	var transactions []model.Transaction
 	var failedItems []dto.SyncFailedItem
@@ -202,7 +205,7 @@ func (s *TransactionService) SyncTransactions(userID string, req dto.SyncRequest
 			Amount:     item.Amount,
 			CategoryID: cat.ID,
 			OccurredAt: item.OccurredAt,
-			Note:       item.Note,
+			Note:       dto.SanitizeString(item.Note),
 		})
 	}
 

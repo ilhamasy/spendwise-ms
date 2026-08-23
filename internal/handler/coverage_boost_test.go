@@ -9,6 +9,7 @@ import (
 
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/dto"
+	"spendwise-ms/internal/middleware"
 	"spendwise-ms/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -211,7 +212,8 @@ func TestHandler_GetBudgetByID(t *testing.T) {
 
 func createBoostUser(t *testing.T) (string, string) {
 	t.Helper()
-	hash, _ := bcrypt.GenerateFromPassword([]byte("pass123"), 12)
+	middleware.ResetLimiters()
+	hash, _ := bcrypt.GenerateFromPassword([]byte("pass123"), 10)
 	uid := uuid.New().String()
 	email := "bst" + uid[:8] + "@t.com"
 	config.DB.Create(&model.User{ID: uid, Name: "Boost", Email: email, Password: string(hash)})
