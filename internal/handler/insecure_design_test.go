@@ -69,6 +69,9 @@ func TestInsecureDesign_PastTargetDateRejection(t *testing.T) {
 }
 
 func TestInsecureDesign_AuthBruteForceRateLimit(t *testing.T) {
+	middleware.ResetLimiters()
+	defer middleware.ResetLimiters()
+
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 

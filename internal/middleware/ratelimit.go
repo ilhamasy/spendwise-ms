@@ -89,3 +89,13 @@ func RateLimitGlobal() gin.HandlerFunc {
 func RateLimitAuth() gin.HandlerFunc {
 	return rateLimit(authLimiter)
 }
+
+func ResetLimiters() {
+	globalLimiter.mu.Lock()
+	globalLimiter.limits = make(map[string]*userLimit)
+	globalLimiter.mu.Unlock()
+
+	authLimiter.mu.Lock()
+	authLimiter.limits = make(map[string]*userLimit)
+	authLimiter.mu.Unlock()
+}
