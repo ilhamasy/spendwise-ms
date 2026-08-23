@@ -38,6 +38,7 @@ func main() {
 
 	r.Use(config.CORS())
 	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.SecurityLogger())
 	r.Use(middleware.RateLimitGlobal())
 
 	r.GET("/health", handler.HealthCheck)
