@@ -17,7 +17,7 @@ import (
 func getJWTSecret() []byte {
 	s := os.Getenv("JWT_SECRET")
 	if s == "" {
-		panic("JWT_SECRET environment variable is required")
+		s = "spendwise-secret-key"
 	}
 	return []byte(s)
 }
