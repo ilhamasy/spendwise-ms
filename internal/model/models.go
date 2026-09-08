@@ -7,12 +7,15 @@ import (
 )
 
 type User struct {
-	ID        string `gorm:"primaryKey;size:36"`
-	Name      string `gorm:"size:100;not null"`
-	Email     string `gorm:"size:100;uniqueIndex;not null"`
-	Password  string `gorm:"size:255;not null"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID              string `gorm:"primaryKey;size:36"`
+	Name            string `gorm:"size:100;not null"`
+	Email           string `gorm:"size:100;uniqueIndex;not null"`
+	Password        string `gorm:"size:255;not null"`
+	Currency        string `gorm:"size:10;default:IDR"`
+	Theme           string `gorm:"size:10;default:system"`
+	StartingBalance int64  `gorm:"default:0"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Transaction struct {
@@ -28,13 +31,16 @@ type Transaction struct {
 }
 
 type Category struct {
-	ID        string `gorm:"primaryKey;size:36"`
-	UserID    string `gorm:"index;size:36"`
-	Name      string `gorm:"size:50;not null"`
-	Type      string `gorm:"size:10;not null;index"` // income | expense
-	Icon      string `gorm:"size:10"`
-	Color     string `gorm:"size:10"`
-	IsDefault bool   `gorm:"default:false"`
+	ID        string     `gorm:"primaryKey;size:36"`
+	UserID    string     `gorm:"index;size:36"`
+	Name      string     `gorm:"size:50;not null"`
+	Type      string     `gorm:"size:10;not null;index"`
+	Icon      string     `gorm:"size:10"`
+	Color     string     `gorm:"size:10"`
+	IsDefault bool       `gorm:"default:false"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time `gorm:"index"`
 }
 
 type SavingGoal struct {

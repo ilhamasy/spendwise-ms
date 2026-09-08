@@ -22,3 +22,12 @@ vendor/
 
 # Environment
 .env
+.env.local
+local.env
+.env.production
+prod.env
+*.env
+!*.env.example
+!*.example
+
+.DS_Store
