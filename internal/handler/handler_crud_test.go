@@ -9,6 +9,7 @@ import (
 
 	"spendwise-ms/internal/config"
 	"spendwise-ms/internal/dto"
+	"spendwise-ms/internal/middleware"
 	"spendwise-ms/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ import (
 
 func setupTest(t *testing.T) (*gin.Engine, string, string) {
 	t.Helper()
+	middleware.ResetLimiters()
 	gin.SetMode(gin.TestMode)
 	if config.DB == nil {
 		cfg := config.Load()

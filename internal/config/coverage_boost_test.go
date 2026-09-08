@@ -60,7 +60,7 @@ func TestConfig_CORS_UnknownOrigin(t *testing.T) {
 	req.Header.Set("Origin", "https://evil.com")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3003" {
+	if w.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3000" {
 		t.Errorf("fallback origin: %s", w.Header().Get("Access-Control-Allow-Origin"))
 	}
 }

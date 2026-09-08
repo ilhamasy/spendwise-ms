@@ -51,10 +51,10 @@ func (s *CategoryService) CreateCategory(userID string, req dto.CreateCategoryRe
 
 	cat := model.Category{
 		UserID:    userID,
-		Name:      req.Name,
+		Name:      dto.SanitizeString(req.Name),
 		Type:      req.Type,
-		Icon:      req.Icon,
-		Color:     req.Color,
+		Icon:      dto.SanitizeString(req.Icon),
+		Color:     dto.SanitizeString(req.Color),
 		IsDefault: false,
 	}
 
@@ -75,19 +75,23 @@ func (s *CategoryService) UpdateCategory(userID, id string, req dto.UpdateCatego
 	if err != nil {
 		return nil, err
 	}
+	if cat.IsDefault {
+		return nil, errors.New("cannot update default category")
+	}
 
 	if req.Name != "" {
-		existing, _ := s.repo.FindByNameAndType(req.Name, cat.Type, userID)
+		sanitizedName := dto.SanitizeString(req.Name)
+		existing, _ := s.repo.FindByNameAndType(sanitizedName, cat.Type, userID)
 		if existing != nil && existing.ID != cat.ID {
-			return nil, fmt.Errorf("category with name '%s' already exists for type '%s'", req.Name, cat.Type)
+			return nil, fmt.Errorf("category with name '%s' already exists for type '%s'", sanitizedName, cat.Type)
 		}
-		cat.Name = req.Name
+		cat.Name = sanitizedName
 	}
 	if req.Icon != "" {
-		cat.Icon = req.Icon
+		cat.Icon = dto.SanitizeString(req.Icon)
 	}
 	if req.Color != "" {
-		cat.Color = req.Color
+		cat.Color = dto.SanitizeString(req.Color)
 	}
 
 	if err := s.repo.Update(cat); err != nil {
@@ -107,7 +111,7 @@ func (s *CategoryService) DeleteCategory(userID, id, reassignToCategoryID string
 		return errors.New("cannot delete default category")
 	}
 
-	count, err := s.repo.CountTransactionsByCategoryID(id)
+	count, err := s.repo.CountTransactionsByCategoryID(id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to check transaction references: %w", err)
 	}

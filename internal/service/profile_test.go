@@ -30,8 +30,9 @@ func setupProfileTestDB() {
 func createTestUser() (string, string) {
 	userID := uuid.New().String()
 	email := "profiletest@spendwise.com"
+	hashed, _ := HashPassword("pass123")
 	config.DB.Create(&model.User{
-		ID: userID, Name: "Profile User", Email: email, Password: "hash",
+		ID: userID, Name: "Profile User", Email: email, Password: hashed,
 	})
 	return userID, email
 }

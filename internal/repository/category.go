@@ -78,9 +78,9 @@ func (r *CategoryRepository) Delete(id, userID string) error {
 	return r.db.Model(&model.Category{}).Where("id = ? AND user_id = ? AND is_default = false", id, userID).Update("deleted_at", now).Error
 }
 
-func (r *CategoryRepository) CountTransactionsByCategoryID(categoryID string) (int64, error) {
+func (r *CategoryRepository) CountTransactionsByCategoryID(categoryID, userID string) (int64, error) {
 	var count int64
-	if err := r.db.Model(&model.Transaction{}).Where("category_id = ?", categoryID).Count(&count).Error; err != nil {
+	if err := r.db.Model(&model.Transaction{}).Where("category_id = ? AND user_id = ?", categoryID, userID).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil

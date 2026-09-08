@@ -24,7 +24,7 @@ type ICategoryRepository interface {
 	Update(cat *model.Category) error
 	Delete(id, userID string) error
 	FindByNameAndType(name, catType, userID string) (*model.Category, error)
-	CountTransactionsByCategoryID(categoryID string) (int64, error)
+	CountTransactionsByCategoryID(categoryID, userID string) (int64, error)
 	ReassignTransactions(fromCategoryID, toCategoryID, userID string) error
 }
 

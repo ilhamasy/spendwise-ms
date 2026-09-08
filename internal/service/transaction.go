@@ -53,7 +53,7 @@ func (s *TransactionService) CreateTransaction(userID string, req dto.CreateTran
 		Amount:     req.Amount,
 		CategoryID: cat.ID,
 		OccurredAt: req.OccurredAt,
-		Note:       req.Note,
+		Note:       dto.SanitizeString(req.Note),
 	}
 
 	if err := s.repo.Create(&tx); err != nil {
@@ -144,7 +144,7 @@ func (s *TransactionService) UpdateTransaction(userID, id string, req dto.Update
 		existing.OccurredAt = req.OccurredAt
 	}
 	if req.Note != "" {
-		existing.Note = req.Note
+		existing.Note = dto.SanitizeString(req.Note)
 	}
 
 	if err := s.repo.Update(existing); err != nil {
@@ -169,6 +169,9 @@ func (s *TransactionService) DeleteTransaction(userID, id string) error {
 func (s *TransactionService) SyncTransactions(userID string, req dto.SyncRequest) (*dto.SyncResponse, error) {
 	if len(req.Transactions) == 0 {
 		return nil, fmt.Errorf("at least one transaction is required")
+	}
+	if len(req.Transactions) > 500 {
+		return nil, fmt.Errorf("batch size exceeds limit of 500 transactions")
 	}
 
 	var transactions []model.Transaction
@@ -202,7 +205,7 @@ func (s *TransactionService) SyncTransactions(userID string, req dto.SyncRequest
 			Amount:     item.Amount,
 			CategoryID: cat.ID,
 			OccurredAt: item.OccurredAt,
-			Note:       item.Note,
+			Note:       dto.SanitizeString(item.Note),
 		})
 	}
 

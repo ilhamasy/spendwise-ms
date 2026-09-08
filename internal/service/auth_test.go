@@ -2,6 +2,8 @@ package service
 
 import (
 	"testing"
+
+	"spendwise-ms/internal/config"
 )
 
 func TestHashPassword(t *testing.T) {
@@ -71,5 +73,29 @@ func TestValidateToken_Invalid(t *testing.T) {
 	_, err := ValidateToken("invalid.token.here")
 	if err == nil {
 		t.Error("ValidateToken should fail for invalid token")
+	}
+}
+
+func TestRegister_And_Login(t *testing.T) {
+	setupCategoryTestDB()
+
+	user, err := Register(config.DB, "Auth Test User", "authtest@spendwise.com", "secret123")
+	if err != nil {
+		t.Fatalf("Register failed: %v", err)
+	}
+
+	_, errDup := Register(config.DB, "Auth Test User", "authtest@spendwise.com", "secret123")
+	if errDup == nil {
+		t.Error("Expected duplicate email error")
+	}
+
+	loggedIn, errLogin := Login(config.DB, "authtest@spendwise.com", "secret123")
+	if errLogin != nil || loggedIn.ID != user.ID {
+		t.Fatalf("Login failed: %v", errLogin)
+	}
+
+	_, errWrong := Login(config.DB, "authtest@spendwise.com", "wrongpass")
+	if errWrong == nil {
+		t.Error("Expected wrong password error")
 	}
 }

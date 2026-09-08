@@ -15,9 +15,13 @@ import (
 var DB *gorm.DB
 
 func InitDB(cfg *Config) {
+	sslMode := cfg.DBSSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable&TimeZone=Asia/Jakarta",
-		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName,
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s&TimeZone=Asia/Jakarta",
+		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, sslMode,
 	)
 
 	var err error

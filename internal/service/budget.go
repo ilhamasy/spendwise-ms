@@ -54,7 +54,7 @@ func (s *BudgetService) CreateBudget(userID string, req dto.CreateBudgetRequest)
 
 	budget := model.Budget{
 		UserID:     userID,
-		Name:       req.Name,
+		Name:       dto.SanitizeString(req.Name),
 		Amount:     req.Amount,
 		Period:     req.Period,
 		CategoryID: req.CategoryID,
@@ -88,7 +88,7 @@ func (s *BudgetService) UpdateBudget(userID, id string, req dto.UpdateBudgetRequ
 	}
 
 	if req.Name != "" {
-		budget.Name = req.Name
+		budget.Name = dto.SanitizeString(req.Name)
 	}
 	if req.Amount > 0 {
 		budget.Amount = req.Amount
@@ -108,7 +108,10 @@ func (s *BudgetService) UpdateBudget(userID, id string, req dto.UpdateBudgetRequ
 		return nil, fmt.Errorf("failed to update budget: %w", err)
 	}
 
-	updated, _ := s.repo.FindByID(id, userID)
+	updated, err := s.repo.FindByID(id, userID)
+	if err != nil || updated == nil {
+		updated = budget
+	}
 	resp := s.budgetToResponse(*updated)
 	return &resp, nil
 }

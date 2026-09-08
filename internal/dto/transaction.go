@@ -4,7 +4,7 @@ import "time"
 
 type CreateTransactionRequest struct {
 	Type       string `json:"type" validate:"required,oneof=income expense"`
-	Amount     int64  `json:"amount" validate:"required,gt=0"`
+	Amount     int64  `json:"amount" validate:"required,gt=0,lte=1000000000000"`
 	CategoryID string `json:"categoryId" validate:"required,min=1"`
 	OccurredAt string `json:"occurredAt" validate:"required,datetime=2006-01-02"`
 	Note       string `json:"note" validate:"max=200"`
@@ -12,7 +12,7 @@ type CreateTransactionRequest struct {
 
 type UpdateTransactionRequest struct {
 	Type       string `json:"type" validate:"omitempty,oneof=income expense"`
-	Amount     int64  `json:"amount" validate:"omitempty,gt=0"`
+	Amount     int64  `json:"amount" validate:"omitempty,gt=0,lte=1000000000000"`
 	CategoryID string `json:"categoryId" validate:"omitempty,min=1"`
 	OccurredAt string `json:"occurredAt" validate:"omitempty,datetime=2006-01-02"`
 	Note       string `json:"note" validate:"max=200"`
@@ -43,7 +43,7 @@ type Meta struct {
 
 type SyncTransactionRequest struct {
 	Type       string `json:"type" validate:"required,oneof=income expense"`
-	Amount     int64  `json:"amount" validate:"required,gt=0"`
+	Amount     int64  `json:"amount" validate:"required,gt=0,lte=1000000000000"`
 	CategoryID string `json:"categoryId" validate:"required,min=1"`
 	OccurredAt string `json:"occurredAt" validate:"required,datetime=2006-01-02"`
 	Note       string `json:"note" validate:"max=200"`

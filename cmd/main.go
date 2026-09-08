@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: .env file not loaded: %v", err)
+	if err := godotenv.Load(".env.local", "local.env", ".env.production", "prod.env", ".env"); err != nil {
+		log.Printf("Notice: Environment file load result: %v", err)
 	}
 
 	cfg := config.Load()
@@ -36,6 +36,9 @@ func main() {
 
 	r := gin.Default()
 
+	r.Use(config.CORS())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.SecurityLogger())
 	r.Use(middleware.RateLimitGlobal())
 
 	r.GET("/health", handler.HealthCheck)

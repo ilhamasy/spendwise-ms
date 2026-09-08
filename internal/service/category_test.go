@@ -167,6 +167,25 @@ func TestUpdateCategory_Success(t *testing.T) {
 	}
 }
 
+func TestUpdateCategory_DefaultCategoryForbidden(t *testing.T) {
+	setupCategoryTestDB()
+	userID := createUserForCategory()
+	svc := NewCategoryService(config.DB)
+
+	defCat := model.Category{
+		ID:        uuid.New().String(),
+		Name:      "Default Salary",
+		Type:      "income",
+		IsDefault: true,
+	}
+	config.DB.Create(&defCat)
+
+	_, err := svc.UpdateCategory(userID, defCat.ID, dto.UpdateCategoryRequest{Name: "Hacked"})
+	if err == nil {
+		t.Error("Expected error when updating default category, got nil")
+	}
+}
+
 func TestDeleteCategory_WithoutTransactions(t *testing.T) {
 	setupCategoryTestDB()
 	userID := createUserForCategory()
